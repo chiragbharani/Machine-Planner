@@ -321,7 +321,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="orders-wrap">
       <table>
-        <thead><tr id="orders-thead"><th></th><th>Order ID</th><th>Part / Item</th><th>Category</th><th>Qty</th><th>Owner</th><th>Machine</th><th>Start</th><th>End</th><th>Dispatch Date</th><th>Actual End</th><th>Days</th><th>Progress</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+        <thead><tr id="orders-thead"><th></th><th>Order ID</th><th>Part / Item</th><th>Category</th><th>Qty</th><th>Owner</th><th>Machine</th><th>Start</th><th>End</th><th>Deadline</th><th>Actual End</th><th>Days</th><th>Progress</th><th>Priority</th><th>Status</th><th></th></tr></thead>
         <tbody id="orders-body"></tbody>
       </table>
     </div>
@@ -425,7 +425,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
         <strong>Important:</strong> The Owner field in each order must be the person's <strong>Gmail address</strong> (e.g. rajesh@gmail.com).<br><br>
         Two reminder types are available:<br>
-        <span style="color:var(--amber)">&#9888; Daily Alerts</span> — urgent only: overdue dispatch, due today/tomorrow, pending approvals. Runs every morning.<br>
+        <span style="color:var(--amber)">&#9888; Daily Alerts</span> — urgent only: overdue deadline, due today/tomorrow, pending approvals. Runs every morning.<br>
         <span style="color:var(--green)">&#128203; 3-Day Summary</span> — full personal summary of all orders, sent every 3 days. Includes running, not started, upcoming dispatches, recently completed.
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -506,8 +506,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-row" style="margin-bottom:0"><label>Actual End (optional)</label><input id="f-actual" type="date"/></div>
     </div>
     <div class="f2" style="margin-bottom:14px">
-      <div class="form-row" style="margin-bottom:0"><label>Dispatch Date <span style="color:var(--red)">*</span></label><input id="f-dispatch" type="date"/></div>
-      <div class="form-row" style="margin-bottom:0"><label></label><div style="font-size:11px;color:var(--text3);margin-top:28px">Required — when this order must be dispatched to customer</div></div>
+      <div class="form-row" style="margin-bottom:0"><label>Deadline <span style="color:var(--red)">*</span></label><input id="f-dispatch" type="date"/></div>
+      <div class="form-row" style="margin-bottom:0"><label></label><div style="font-size:11px;color:var(--text3);margin-top:28px">Required — customer deadline / deadline</div></div>
     </div>
     <div class="form-row">
       <label>Status</label>
@@ -550,7 +550,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="tt-row"><span>Start</span><span id="tt-start"></span></div>
   <div class="tt-row"><span>End</span><span id="tt-end"></span></div>
   <div class="tt-row"><span>Actual End</span><span id="tt-actual"></span></div>
-  <div class="tt-row"><span>Dispatch Date</span><span id="tt-dispatch"></span></div>
+  <div class="tt-row"><span>Deadline</span><span id="tt-dispatch"></span></div>
   <div class="tt-row"><span>Progress</span><span id="tt-pct"></span></div>
   <div class="tt-row"><span>Priority</span><span id="tt-pri"></span></div>
 </div>
@@ -1030,8 +1030,8 @@ function renderOrders() {
           '<td colspan="2" style="padding-left:28px"><div style="display:flex;align-items:center;gap:8px"><span class="stage-num">' + s.seq + '</span>' +
           '<span style="font-weight:500">' + s.name + (s.approvalRequired ? ' <span style="color:var(--purple);font-size:10px">◆ Approval</span>' : '') + '</span></div></td>' +
           '<td></td><td style="color:var(--text2)">' + (s.notes||'—') + '</td>' +
-          '<td style="color:var(--blue)">' + smn + '</td>' +
           '<td style="color:var(--text3);font-size:11px">' + (s.assignee?s.assignee.split('@')[0]:'—') + '</td>' +
+          '<td style="color:var(--amber);font-size:12px">' + (s.end?dispFull(s.end):'—') + '</td>' +
           '<td>' + dispFull(s.start) + '</td><td>' + dispFull(s.end) + '</td>' +
           '<td>' + (s.actualEnd ? '<span style="color:var(--green)">'+dispFull(s.actualEnd)+'</span>' : '—') + '</td>' +
           '<td colspan="3">' + sBadge + '</td>' +
@@ -1313,27 +1313,25 @@ function addStageField(existing = null) {
   stageFields.push({fid, existing});
   const editor = document.getElementById('stages-editor');
   const div = document.createElement('div'); div.className = 'stage-item'; div.id = 'stage-item-' + fid;
-  const stV  = existing ? normaliseDate(existing.start)||existing.start||'' : '';
-  const enV  = existing ? normaliseDate(existing.end)||existing.end||''     : '';
+  const dlV  = existing ? normaliseDate(existing.end)||existing.end||'' : '';
   const appr = existing && existing.approvalRequired ? 'checked' : '';
+  const done = existing && (existing.status==='done'||existing.status==='approved') ? 'checked' : '';
   div.innerHTML =
     '<div class="stage-item-head">' +
     '<div class="stage-item-seq">' + (idx+1) + '</div>' +
     '<div class="stage-item-title">Stage ' + (idx+1) + '</div>' +
     '<button class="btn btn-sm btn-red" style="padding:2px 8px;font-size:11px" onclick="removeStageField(\'' + fid + '\')">✕</button>' +
     '</div>' +
-    '<div class="f2" style="margin-bottom:8px">' +
+    '<div class="f3" style="margin-bottom:8px">' +
     '<div><div class="mc-lbl">Stage Name</div><input id="' + fid + '-name" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.name:'') + '" placeholder="e.g. CNC Roughing"/></div>' +
-    '<div><div class="mc-lbl">Machine</div><select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0">' + machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + '</option>').join('') + '</select></div>' +
-    '</div><div class="f2" style="margin-bottom:8px">' +
-    '<div><div class="mc-lbl">Assigned To <span style="font-size:9px;color:var(--text3)">(Gmail for notifications)</span></div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.assignee?existing.assignee:'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '<div><div class="mc-lbl">Assigned To</div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.assignee?existing.assignee:'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '<div><div class="mc-lbl">Deadline</div><input id="' + fid + '-deadline" class="mc-inp" type="date" style="margin-bottom:0" value="' + dlV + '"/></div>' +
     '</div>' +
-    '<div class="f2" style="margin-bottom:8px">' +
-    '<div><div class="mc-lbl">Start Date</div><input id="' + fid + '-start" class="mc-inp" type="date" style="margin-bottom:0" value="' + stV + '"/></div>' +
-    '<div><div class="mc-lbl">End Date</div><input id="' + fid + '-end" class="mc-inp" type="date" style="margin-bottom:0" value="' + enV + '"/></div>' +
+    '<div style="display:flex;gap:16px;align-items:center;margin-bottom:6px">' +
+    '<label class="approval-toggle"><input type="checkbox" id="' + fid + '-approval" ' + appr + '/><span>Requires sample approval</span></label>' +
+    '<label class="approval-toggle" style="color:var(--green)"><input type="checkbox" id="' + fid + '-done" ' + done + ' style="accent-color:var(--green)"/><span>Mark as Completed</span></label>' +
     '</div>' +
-    '<label class="approval-toggle"><input type="checkbox" id="' + fid + '-approval" ' + appr + '/><span>Requires sample approval before next stage</span></label>' +
-    '<div style="margin-top:8px"><div class="mc-lbl">Notes</div><input id="' + fid + '-notes" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.notes||'':'') + '" placeholder="Optional notes"/></div>';
+    '<div><div class="mc-lbl">Notes</div><input id="' + fid + '-notes" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.notes||'':'') + '" placeholder="Optional notes"/></div>';
   editor.appendChild(div);
 }
 
@@ -1353,7 +1351,7 @@ async function saveOrder() {
   const end        = document.getElementById('f-end').value || '';
   const actualEnd   = document.getElementById('f-actual').value || '';
   const dispatchDate = document.getElementById('f-dispatch').value || '';
-  if (!dispatchDate) { document.getElementById('err-msg').textContent='Please select a Dispatch Date.'; document.getElementById('err-msg').style.display='block'; return; }
+  if (!dispatchDate) { document.getElementById('err-msg').textContent='Please select a Deadline.'; document.getElementById('err-msg').style.display='block'; return; }
   const priority   = document.getElementById('f-pri').value;
   const category   = document.getElementById('f-category').value || '';
   const manualStatus = document.getElementById('f-status').value || 'running';
@@ -1388,9 +1386,9 @@ async function saveOrder() {
 
   let orderStart = start, orderEnd = end;
   if (multiStage && stageFields.length) {
-    const fs = document.getElementById(stageFields[0].fid+'-start')?.value || '';
-    const le = document.getElementById(stageFields[stageFields.length-1].fid+'-end')?.value || '';
-    if (fs) orderStart = fs; if (le) orderEnd = le;
+    // Use last stage deadline as order end date
+    const le = document.getElementById(stageFields[stageFields.length-1].fid+'-deadline')?.value || '';
+    if (le) orderEnd = le;
   }
 
   const order = {
@@ -1416,12 +1414,13 @@ async function saveOrder() {
         const sid = f.existing ? f.existing.id : ('STG-' + String(stageCounter).padStart(4,'0'));
         const stage = {
           id: sid, orderId, seq: i+1,
-          name:     document.getElementById(f.fid+'-name')?.value.trim()    || 'Stage '+(i+1),
-          machine:  document.getElementById(f.fid+'-machine')?.value       || '',
-          assignee: document.getElementById(f.fid+'-assignee')?.value.trim()|| '',
-          start:   document.getElementById(f.fid+'-start')?.value        || '',
-          end:     document.getElementById(f.fid+'-end')?.value          || '',
-          actualEnd: '', status: f.existing ? f.existing.status : 'pending',
+          name:     document.getElementById(f.fid+'-name')?.value.trim()     || 'Stage '+(i+1),
+          machine:  '',
+          assignee: document.getElementById(f.fid+'-assignee')?.value.trim() || '',
+          start:    '',
+          end:      document.getElementById(f.fid+'-deadline')?.value         || '',
+          actualEnd: '',
+          status: (document.getElementById(f.fid+'-done')?.checked) ? 'done' : (f.existing ? f.existing.status : 'pending'),
           approvalRequired: document.getElementById(f.fid+'-approval')?.checked || false,
           approvedBy:'', approvedAt:'', rejectedNote:'',
           notes: document.getElementById(f.fid+'-notes')?.value || ''
@@ -1432,19 +1431,19 @@ async function saveOrder() {
         if (si >= 0) stages[si] = stage; else stages.push(stage);
       }
     }
-    const isNew = !editId;
+    const wasNew = !editId;
     closeOrderModal(); renderAll(); updateApprovalDot();
-    toast(isNew ? 'Order added ✓' : 'Order updated ✓');
-    // Send email notification to owner + team members (fire and forget)
+    toast(wasNew ? 'Order added ✓' : 'Order updated ✓');
+    // Send instant notification to owner + team (fire and forget)
     if (order.owner || order.teamMembers) {
-      call('notifyOrderCreated', {order, isNew}).catch(()=>{});
+      call('notifyOrderCreated', {order, isNew: wasNew}).catch(()=>{});
     }
   } catch(e) { em.textContent = 'Save failed: ' + e.message; em.style.display='block'; }
   finally { btn.textContent = 'Save Order'; btn.disabled = false; }
 }
 
 // ── CSV ───────────────────────────────────────────────────
-const CSV_HDR = ['Order ID','Part Name','Category','Qty','Owner','Machine','Start Date','End Date','Dispatch Date','Actual End Date','Progress %','Priority','Status'];
+const CSV_HDR = ['Order ID','Part Name','Category','Qty','Owner','Machine','Start Date','End Date','Deadline','Actual End Date','Progress %','Priority','Status'];
 
 function exportCSV() {
   const rows = [CSV_HDR];
@@ -1494,7 +1493,7 @@ async function parseCSV(text, fname) {
     if (lines.length < 2) { toast('CSV has no data rows','error'); return; }
     const hdrs = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g,'').trim().toLowerCase());
     const idx = {};
-    ['order id','part name','category','qty','owner','machine','start date','end date','dispatch date','actual end date','progress %','priority','status'].forEach(h => { const i=hdrs.indexOf(h); if(i>=0) idx[h]=i; });
+    ['order id','part name','category','qty','owner','machine','start date','end date','deadline','actual end date','progress %','priority','status'].forEach(h => { const i=hdrs.indexOf(h); if(i>=0) idx[h]=i; });
     if (idx['part name'] === undefined) { toast('Missing required column: Part Name','error'); return; }
 
     const mmap = {};
@@ -1524,7 +1523,7 @@ async function parseCSV(text, fname) {
       const qty      = idx['qty']       !== undefined ? Math.max(1,parseInt(row[idx['qty']])||1) : 1;
       const owner    = idx['owner']     !== undefined ? String(row[idx['owner']]||'') : '';
       const category = idx['category']  !== undefined ? row[idx['category']] || '' : '';
-      const dispRaw  = idx['dispatch date'] !== undefined ? row[idx['dispatch date']] || '' : '';
+      const dispRaw  = idx['deadline'] !== undefined ? row[idx['deadline']] || '' : '';
       const dispatchDate = dispRaw ? normaliseDate(dispRaw)||'' : '';
       const aeRaw    = idx['actual end date'] !== undefined ? row[idx['actual end date']] || '' : '';
       const ae       = aeRaw ? normaliseDate(aeRaw) || '' : '';
