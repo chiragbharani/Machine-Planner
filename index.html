@@ -32,7 +32,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .setup-err{font-size:12px;margin-top:8px;display:none;line-height:1.6;padding:8px 12px;border-radius:var(--radius)}
 .setup-hint{background:var(--bg3);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--text2);margin-top:10px;line-height:1.6;border:1px solid var(--border)}
 /* Topbar */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:50;background:var(--bg)}
 .logo{display:flex;align-items:center;gap:10px}
 .lm{width:30px;height:30px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center}
 .lm svg{width:16px;height:16px}
@@ -52,7 +52,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .tab .bdot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red);display:none}
 .tab .bdot.show{display:block}
 /* Metrics */
-.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:18px 24px}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:18px 24px;position:sticky;top:56px;z-index:40;background:var(--bg)}
 .metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px}
 .metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px}
 .metric-val{font-size:22px;font-weight:600;font-family:'IBM Plex Mono',monospace;line-height:1}
@@ -74,7 +74,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .btn-blue{background:var(--blue-dim);color:var(--blue);border-color:rgba(77,142,248,0.3)}
 .btn-sm{padding:4px 10px;font-size:12px}
 /* Date nav */
-.date-nav{display:flex;align-items:center;gap:8px;padding:0 24px 14px;flex-wrap:wrap}
+.date-nav{display:flex;align-items:center;gap:8px;padding:8px 24px 14px;flex-wrap:wrap;position:sticky;top:calc(56px + 108px);z-index:39;background:var(--bg)}
 .dnbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;transition:all 0.15s}
 .dnbtn:hover{background:var(--bg3);color:var(--text)}
 .drlabel{font-size:13px;font-weight:500;background:var(--bg3);padding:5px 14px;border-radius:var(--radius);border:1px solid var(--border);white-space:nowrap}
@@ -86,7 +86,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .gantt-outer{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--bg2)}
 .gantt-scroll{overflow-x:auto}
 .gantt-inner{min-width:620px}
-.g-axis{display:flex;border-bottom:1px solid var(--border)}
+.g-axis{display:flex;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:3;background:var(--bg2)}
 .g-spacer{width:160px;min-width:160px;border-right:1px solid var(--border);flex-shrink:0}
 .g-tick{flex:1;text-align:center;font-size:10px;padding:5px 2px;border-right:1px solid var(--border);min-width:0}
 .g-tick:last-child{border-right:none}
@@ -318,6 +318,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <input id="filter-search" oninput="applyFilters()" placeholder="Search part / order ID..." style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none;min-width:180px"/>
       <button class="btn btn-sm" onclick="clearFilters()" style="padding:5px 10px">&#10005; Clear</button>
       <span id="filter-count" style="font-size:12px;color:var(--text3)"></span>
+      <select id="sort-by" onchange="applyFilters()" style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none;margin-left:auto">
+        <option value="deadline_asc">Deadline ↑ (earliest first)</option>
+        <option value="deadline_desc">Deadline ↓ (latest first)</option>
+        <option value="start_asc">Start Date ↑</option>
+        <option value="start_desc">Start Date ↓</option>
+        <option value="id_asc">Order ID ↑</option>
+        <option value="id_desc">Order ID ↓</option>
+        <option value="priority">Priority (High first)</option>
+      </select>
     </div>
     <div class="orders-wrap">
       <table>
@@ -509,14 +518,23 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-row" style="margin-bottom:0"><label>Deadline <span style="color:var(--red)">*</span></label><input id="f-dispatch" type="date"/></div>
       <div class="form-row" style="margin-bottom:0"><label></label><div style="font-size:11px;color:var(--text3);margin-top:28px">Required — customer deadline / deadline</div></div>
     </div>
-    <div class="form-row">
-      <label>Status</label>
-      <select id="f-status"><option value="not_started">Not Started</option><option value="running" selected>Running</option><option value="completed">Completed</option></select>
+    <div class="f2" style="margin-bottom:0">
+      <div class="form-row" style="margin-bottom:0">
+        <label>Status</label>
+        <select id="f-status"><option value="not_started">Not Started</option><option value="running" selected>Running</option><option value="completed">Completed</option></select>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Planning</label>
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;margin-top:0">
+          <input type="checkbox" id="f-planned" style="accent-color:var(--green);width:16px;height:16px"/>
+          <span style="font-size:13px;color:var(--text2)">Marked as Planned</span>
+        </label>
+      </div>
     </div>
     <div class="sdivider">Multi-Stage</div>
     <label class="ms-toggle" style="display:flex">
       <input type="checkbox" id="f-multistage" onchange="toggleMultiStage(this.checked)"/>
-      <div><div class="ms-toggle-label">This order has multiple stages / machines</div><div class="ms-toggle-sub">e.g. Roughing → Finishing → Grinding → Sample Approval → Production Run</div></div>
+      <div><div class="ms-toggle-label">This order runs on multiple machines / stages</div><div class="ms-toggle-sub">Assign each stage its own machine, deadline and person. Machine in main form ignored when stages are used.</div></div>
     </label>
     <div id="simple-progress-section">
       <div class="sdivider">Progress</div>
@@ -965,6 +983,9 @@ function renderOrders() {
       o.category === 'NPD'        ? '<span class="badge badge-npd">NPD</span>' :
       o.category === 'Production' ? '<span class="badge badge-prod">Production</span>' :
                                     '<span style="color:var(--text3);font-size:11px">—</span>';
+    const plannedBadge = o.planned===true||o.planned==='true'||o.planned==='1'
+      ? '<span class="badge" style="background:var(--green-dim);color:var(--green)">✓ Planned</span>'
+      : '<span class="badge" style="background:var(--red-dim);color:var(--red)">Unplanned</span>';
     const mn = o.multiStage ? '<span style="color:var(--purple)">Multi-stage</span>' : '<span style="color:' + cl.text + '">' + (machines.find(m => m.id === o.machine)?.name || o.machine || '—') + '</span>';
     const dur = o.start && o.end ? diffDays(o.start, o.end) + 1 : 0;
     const isExpanded = expandedOrders.has(o.id);
@@ -999,6 +1020,7 @@ function renderOrders() {
       '<td>' + catBadge + '</td>' +
       '<td><span class="qty-badge">' + (o.qty||1) + '</span></td>' +
       '<td style="color:var(--text2)">' + (o.owner||'—') + '</td>' +
+      '<td>' + plannedBadge + '</td>' +
       '<td>' + mn + '</td>' +
       '<td>' + (dispFull(o.start)||'—') + '</td>' +
       '<td>' + (dispFull(o.end)||'—') + '</td>' +
@@ -1285,6 +1307,7 @@ function openOrderModal(id) {
     document.getElementById('f-pri').value      = 'Normal';
     document.getElementById('f-category').value = '';
     document.getElementById('f-status').value   = 'running';
+    document.getElementById('f-planned').checked = false;
     document.getElementById('f-prange').value   = 0;
     document.getElementById('f-pnum').value     = 0;
     document.getElementById('f-multistage').checked = false;
@@ -1355,6 +1378,7 @@ async function saveOrder() {
   const priority   = document.getElementById('f-pri').value;
   const category   = document.getElementById('f-category').value || '';
   const manualStatus = document.getElementById('f-status').value || 'running';
+  const planned      = document.getElementById('f-planned').checked;
   const notes      = document.getElementById('f-notes').value.trim();
   const multiStage = document.getElementById('f-multistage').checked;
   const manualPct  = multiStage ? null : (parseInt(document.getElementById('f-pnum').value)||0);
@@ -1397,7 +1421,7 @@ async function saveOrder() {
     start: normaliseDate(orderStart) || orderStart,
     end:   normaliseDate(orderEnd)   || orderEnd,
     actualEnd: normaliseDate(actualEnd) || actualEnd,
-    manualPct, priority, category, manualStatus, dispatchDate: normaliseDate(dispatchDate)||dispatchDate,
+    manualPct, priority, category, manualStatus, planned, dispatchDate: normaliseDate(dispatchDate)||dispatchDate,
     ci: editId ? (orders.find(x => String(x.id).trim()===String(editId).trim())?.ci || 0) : ((orderCounter-1) % COLORS.length),
     multiStage, status:'active', notes
   };
@@ -1623,7 +1647,7 @@ function getFilteredOrders() {
   const pri  = document.getElementById('filter-priority')?.value || '';
   const srch = (document.getElementById('filter-search')?.value  || '').toLowerCase().trim();
 
-  return orders.filter(o => {
+  const filtered = orders.filter(o => {
     if (hideCompleted && orderStatus(o) === 'done') return false;
     if (cat  && o.category !== cat) return false;
     if (st === 'overdue') { if (!(orderStatus(o) === 'running' && o.end && dateLt(o.end, TODAY))) return false; }
@@ -1633,6 +1657,22 @@ function getFilteredOrders() {
     if (srch && !o.part.toLowerCase().includes(srch) && !o.id.toLowerCase().includes(srch) && !(o.owner||'').toLowerCase().includes(srch)) return false;
     return true;
   });
+  // Sort
+  const sortBy = document.getElementById('sort-by')?.value || 'deadline_asc';
+  const priOrder = {High:0, Normal:1, Low:2};
+  filtered.sort((a,b) => {
+    switch(sortBy) {
+      case 'deadline_asc':  return (a.dispatchDate||'9999').localeCompare(b.dispatchDate||'9999');
+      case 'deadline_desc': return (b.dispatchDate||'0000').localeCompare(a.dispatchDate||'0000');
+      case 'start_asc':     return (a.start||'9999').localeCompare(b.start||'9999');
+      case 'start_desc':    return (b.start||'0000').localeCompare(a.start||'0000');
+      case 'id_asc':        return a.id.localeCompare(b.id);
+      case 'id_desc':       return b.id.localeCompare(a.id);
+      case 'priority':      return (priOrder[a.priority]||1)-(priOrder[b.priority]||1);
+      default:              return 0;
+    }
+  });
+  return filtered;
 }
 
 function renderAll() { renderMetrics(); renderGantt(); renderOrders(); populateMachineFilter(); }
