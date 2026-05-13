@@ -718,9 +718,10 @@ async function syncNow(silent = false) {
   setSync('syncing', 'Syncing…');
   try {
     const d = await call('getAll');
-    machines = d.machines || [];
-    orders = (d.orders || []).map(o => ({...o, id: String(o.id||'').trim()}));
-    stages = (d.stages || []).map(s => ({...s, id: String(s.id||'').trim(), orderId: String(s.orderId||'').trim()}));
+    machines  = d.machines || [];
+    orders    = (d.orders || []).map(o => ({...o, id: String(o.id||'').trim()}));
+    stages    = (d.stages || []).map(s => ({...s, id: String(s.id||'').trim(), orderId: String(s.orderId||'').trim()}));
+    templates = d.templates || [];
     orderCounter   = orders.length  ? Math.max(...orders.map(o  => parseInt(o.id.replace(/\D/g,''))||0))+1  : 1;
     machineCounter = machines.length? Math.max(...machines.map(m => parseInt(m.id.replace(/\D/g,''))||0))+1 : 1;
     stageCounter   = stages.length  ? Math.max(...stages.map(s  => parseInt(s.id.replace(/\D/g,''))||0))+1  : 1;
