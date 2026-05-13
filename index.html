@@ -9,7 +9,7 @@
 :root{--bg:#0f1117;--bg2:#181c27;--bg3:#1f2433;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--text:#e8eaf2;--text2:#8b90a8;--text3:#555a72;--green:#00c98d;--green-dim:rgba(0,201,141,0.12);--amber:#f5a623;--amber-dim:rgba(245,166,35,0.12);--red:#ff5f5f;--red-dim:rgba(255,95,95,0.12);--blue:#4d8ef8;--blue-dim:rgba(77,142,248,0.12);--purple:#9b7eff;--purple-dim:rgba(155,126,255,0.12);--radius:8px;--radius-lg:12px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
-.mono{font-family:'IBM Plex Mono',monospace}
+.mono{font-family:monospace}
 /* Setup */
 #setup-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 .setup-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:32px;width:560px;max-width:100%}
@@ -24,7 +24,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .sbody h4{font-size:13px;font-weight:600;margin-bottom:4px}
 .sbody p{font-size:12px;color:var(--text2);line-height:1.65;margin-bottom:5px}
 .sbody p:last-child{margin-bottom:0}
-.sbody code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--amber)}
+.sbody code{font-family:monospace;font-size:11px;background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--amber)}
 .sbody a{color:var(--blue);text-decoration:none}
 .url-row{display:flex;gap:8px;margin-top:10px}
 .url-inp{flex:1;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none;transition:border-color 0.15s}
@@ -39,7 +39,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .logo-text{font-size:15px;font-weight:600;letter-spacing:-0.3px}
 .logo-sub{font-size:11px;color:var(--text2);margin-top:1px}
 .tr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.clock-box{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text2);background:var(--bg3);padding:5px 12px;border-radius:6px;border:1px solid var(--border)}
+.clock-box{font-family:monospace;font-size:13px;color:var(--text2);background:var(--bg3);padding:5px 12px;border-radius:6px;border:1px solid var(--border)}
 .sync-pill{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
 .sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .sdot.live{background:var(--green);box-shadow:0 0 0 2px rgba(0,201,141,0.25)}
@@ -55,7 +55,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:18px 24px;position:sticky;top:56px;z-index:40;background:var(--bg)}
 .metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px}
 .metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px}
-.metric-val{font-size:22px;font-weight:600;font-family:'IBM Plex Mono',monospace;line-height:1}
+.metric-val{font-size:22px;font-weight:600;font-family:monospace;line-height:1}
 .metric-sub{font-size:11px;color:var(--text2);margin-top:5px}
 .metric.green .metric-val{color:var(--green)}.metric.amber .metric-val{color:var(--amber)}.metric.blue .metric-val{color:var(--blue)}.metric.purple .metric-val{color:var(--purple)}.metric.red .metric-val{color:var(--red)}
 /* Shared */
@@ -95,7 +95,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .g-row:last-child{border-bottom:none}
 .m-col{width:160px;min-width:160px;padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:2px;flex-shrink:0}
 .m-name{font-weight:600;font-size:13px}.m-type{font-size:10px;color:var(--text3)}
-.m-stat{font-size:10px;font-family:'IBM Plex Mono',monospace}
+.m-stat{font-size:10px;font-family:monospace}
 .m-stat.run{color:var(--green)}.m-stat.idle{color:var(--text3)}
 .t-col{flex:1;position:relative;height:64px;min-width:0}
 .jbar{position:absolute;top:12px;height:40px;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:500;cursor:pointer;overflow:hidden;white-space:nowrap;transition:filter 0.15s;border:1px solid}
@@ -103,7 +103,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .jprog{position:absolute;left:0;top:0;bottom:0;border-radius:5px;opacity:0.22}
 .jbar-approval{border-style:dashed!important}
 .now-line{position:absolute;top:0;bottom:0;width:2px;z-index:5;pointer-events:none;background:rgba(255,95,95,0.7)}
-.now-lbl{position:absolute;top:2px;font-size:9px;font-family:'IBM Plex Mono',monospace;font-weight:600;transform:translateX(-50%);z-index:6;color:#ff5f5f}
+.now-lbl{position:absolute;top:2px;font-size:9px;font-family:monospace;font-weight:600;transform:translateX(-50%);z-index:6;color:#ff5f5f}
 .grid-line{position:absolute;top:0;bottom:0;width:1px;background:var(--border);pointer-events:none}
 /* Panels */
 .bottom-panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 24px 20px}
@@ -132,12 +132,12 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .badge-prod{background:rgba(168,224,99,0.12);color:#a8e063}
 .pbar{width:72px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .pbar-fill{height:100%;border-radius:3px}
-.pct-inp{width:52px;padding:3px 6px;border:1px solid var(--border2);border-radius:5px;background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Mono',monospace;outline:none;text-align:right}
+.pct-inp{width:52px;padding:3px 6px;border:1px solid var(--border2);border-radius:5px;background:var(--bg3);color:var(--text);font-size:12px;font-family:monospace;outline:none;text-align:right}
 .pct-inp:focus{border-color:var(--green)}
-.qty-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:2px 7px;border-radius:20px;font-size:12px;font-weight:600;font-family:'IBM Plex Mono',monospace;background:var(--bg3);border:1px solid var(--border2);color:var(--text2)}
+.qty-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:2px 7px;border-radius:20px;font-size:12px;font-weight:600;font-family:monospace;background:var(--bg3);border:1px solid var(--border2);color:var(--text2)}
 .stage-sub-row td{background:rgba(255,255,255,0.01);font-size:12px}
 .stage-sub-row:hover td{background:rgba(255,255,255,0.03)}
-.stage-num{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text2);flex-shrink:0}
+.stage-num{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-family:monospace;color:var(--text2);flex-shrink:0}
 /* Approvals */
 .approval-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-bottom:12px}
 .approval-card.urgent{border-color:rgba(155,126,255,0.4)}
@@ -151,7 +151,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .machines-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:4px 0 16px}
 .mcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px}
 .mcard-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.mcard-id{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.mcard-id{font-size:11px;color:var(--text3);font-family:monospace}
 .mc-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
 .mc-inp{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none;margin-bottom:10px;transition:border-color 0.15s}
 .mc-inp:focus{border-color:var(--green)}.mc-inp:last-of-type{margin-bottom:0}
@@ -161,7 +161,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .import-info{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:16px}
 .import-info h3{font-size:13px;font-weight:600;margin-bottom:8px}
 .import-info p{font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.6}
-.import-info code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--amber)}
+.import-info code{font-family:monospace;font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--amber)}
 .drop-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:12px}
 .drop-zone:hover,.drop-zone.over{border-color:var(--green);background:var(--green-dim)}
 .drop-zone p{font-size:13px;color:var(--text2);margin-bottom:6px}
@@ -201,7 +201,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .tooltip{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:12px;pointer-events:none;z-index:200;display:none;min-width:210px;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
 .tt-title{font-weight:600;margin-bottom:6px;font-size:13px}
 .tt-row{display:flex;justify-content:space-between;gap:16px;color:var(--text2);padding:2px 0}
-.tt-row span:last-child{color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px}
+.tt-row span:last-child{color:var(--text);font-family:monospace;font-size:11px}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:10px 20px;font-size:13px;z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
@@ -254,6 +254,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <button class="tab" onclick="switchTab('archive',this)">Archive</button>
       <button class="tab" onclick="switchTab('import',this)">Import/Export</button>
       <button class="tab" onclick="switchTab('machines',this)">Machines</button>
+      <button class="tab" onclick="switchTab('templates',this)">&#128196; Templates</button>
       <button class="tab" onclick="switchTab('chat',this)">&#128172; Chat</button>
       <button class="tab" onclick="switchTab('settings',this)">Settings</button>
     </div>
@@ -414,7 +415,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:600;margin-bottom:6px">Google Sheets Connection</div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Web App URL</div>
-      <div id="settings-url" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);background:var(--bg3);padding:8px 12px;border-radius:var(--radius);word-break:break-all;border:1px solid var(--border);margin-bottom:12px"></div>
+      <div id="settings-url" style="font-family:monospace;font-size:11px;color:var(--text2);background:var(--bg3);padding:8px 12px;border-radius:var(--radius);word-break:break-all;border:1px solid var(--border);margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="changeUrl()">Change URL</button>
         <button class="btn btn-sm" onclick="syncNow()">&#8635; Sync Now</button>
@@ -451,10 +452,54 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px">
       <div style="font-size:13px;font-weight:600;margin-bottom:6px">Share With Your Team</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">Send this link. Each person pastes the Web App URL once.</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);background:var(--bg3);padding:8px 12px;border-radius:var(--radius);word-break:break-all;border:1px solid var(--border)" id="page-url"></div>
+      <div style="font-family:monospace;font-size:11px;color:var(--amber);background:var(--bg3);padding:8px 12px;border-radius:var(--radius);word-break:break-all;border:1px solid var(--border)" id="page-url"></div>
     </div>
   </div>
 </div>
+<!-- TEMPLATES TAB -->
+<div id="tab-templates" style="display:none">
+  <div class="section" style="padding-top:8px">
+    <div class="section-head">
+      <span class="section-title">Order Templates</span>
+      <button class="btn btn-green" onclick="openTemplateModal(null)">+ New Template</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
+      &#128161; Templates save your standard process per item code. When adding a new order, type the item code and click <strong>Load Template</strong> to auto-fill all stages with dates calculated from the order start date.
+    </div>
+    <div id="templates-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px"></div>
+  </div>
+</div>
+
+<!-- TEMPLATE MODAL -->
+<div class="modal-bg" id="template-modal">
+  <div class="modal" style="width:580px">
+    <div class="modal-title" id="template-modal-title">New Template</div>
+    <div class="f2" style="margin-bottom:14px">
+      <div class="form-row" style="margin-bottom:0">
+        <label>Item Code <span style="color:var(--red)">*</span></label>
+        <input id="t-itemcode" placeholder="e.g. GI-1042" style="text-transform:uppercase"/>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Category</label>
+        <select id="t-category"><option value="">— Select —</option><option value="Production">Production</option><option value="NPD">NPD</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Default Owner <span style="color:var(--text3);font-size:10px">(Gmail)</span></label>
+      <input id="t-owner" placeholder="e.g. rajesh@gmail.com"/>
+    </div>
+    <div class="sdivider">Stages</div>
+    <div id="t-stages-editor" style="margin-top:8px"></div>
+    <button class="add-stage-btn" onclick="addTemplateStage()">+ Add Stage</button>
+    <div class="form-row" style="margin-top:14px"><label>Notes</label><textarea id="t-notes" placeholder="Optional notes about this process..."></textarea></div>
+    <div class="err-msg" id="t-err-msg"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeTemplateModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveTemplate()">Save Template</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHAT TAB -->
 <div id="tab-chat" style="display:none">
   <div class="section" style="padding-top:8px;max-width:700px">
@@ -493,7 +538,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="modal">
     <div class="modal-title" id="modal-title">Add New Order</div>
     <div class="f3" style="margin-bottom:14px">
-      <div class="form-row" style="margin-bottom:0"><label>Item Code / Part Name *</label><input id="f-part" placeholder="e.g. SF-1042"/></div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Item Code / Part Name *</label>
+        <div style="display:flex;gap:8px">
+          <input id="f-part" placeholder="e.g. SF-1042" style="flex:1" oninput="checkTemplateMatch()"/>
+          <button class="btn btn-sm btn-blue" id="load-template-btn" onclick="loadTemplate()" style="display:none;white-space:nowrap">&#128196; Load Template</button>
+        </div>
+        <div id="template-match-hint" style="font-size:11px;color:var(--green);margin-top:4px;display:none"></div>
+      </div>
       <div class="form-row" style="margin-bottom:0"><label>Quantity *</label><input id="f-qty" type="number" min="1" value="1"/></div>
       <div class="form-row" style="margin-bottom:0"><label>Category</label>
         <select id="f-category"><option value="">— Select —</option><option value="Production">Production</option><option value="NPD">NPD</option></select>
@@ -504,13 +556,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-row" style="margin-bottom:0"><label>Team Members <span style="color:var(--text3);font-size:10px">(comma-separated Gmail addresses)</span></label><input id="f-team" placeholder="e.g. priya@gmail.com, amit@gmail.com"/></div>
     </div>
     <div class="f2" style="margin-bottom:14px">
-      <div class="form-row" style="margin-bottom:0"><label>Machine (optional)</label><select id="f-machine"><option value="">— None —</option></select></div>
+      <div id="main-machine-row" class="form-row" style="margin-bottom:0"><label>Machine (optional) <span id="machine-note" style="font-size:10px;color:var(--text3);display:none">— set per stage when multi-stage is on</span></label><select id="f-machine"><option value="">— None —</option></select></div>
       <div class="form-row" style="margin-bottom:0"><label>Priority</label>
         <select id="f-pri"><option>High</option><option selected>Normal</option><option>Low</option></select>
       </div>
     </div>
     <div class="f3" style="margin-bottom:14px">
-      <div class="form-row" style="margin-bottom:0"><label>Planned Start (optional)</label><input id="f-start" type="date"/></div>
+      <div class="form-row" style="margin-bottom:0"><label>Planned Start (optional)</label><input id="f-start" type="date" oninput="recalcStageStarts()"/></div>
       <div class="form-row" style="margin-bottom:0"><label>Planned End (optional)</label><input id="f-end" type="date"/></div>
       <div class="form-row" style="margin-bottom:0"><label>Actual End (optional)</label><input id="f-actual" type="date"/></div>
     </div>
@@ -540,7 +592,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="sdivider">Progress</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
         <input type="range" id="f-prange" min="0" max="100" step="1" value="0" style="flex:1" oninput="document.getElementById('f-pnum').value=this.value"/>
-        <input type="number" id="f-pnum" min="0" max="100" value="0" style="width:60px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Mono',monospace;outline:none;text-align:center" oninput="document.getElementById('f-prange').value=this.value"/>
+        <input type="number" id="f-pnum" min="0" max="100" value="0" style="width:60px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:monospace;outline:none;text-align:center" oninput="document.getElementById('f-prange').value=this.value"/>
         <span style="font-size:13px;color:var(--text2)">%</span>
       </div>
     </div>
@@ -1069,6 +1121,10 @@ document.addEventListener('click', function(e) {
   const delBtn    = e.target.closest('.del-order-btn');
   const expBtn    = e.target.closest('.expand-order-btn');
   if (editBtn)     { const id=editBtn.dataset.oid;     if(id) openOrderModal(id); }
+  const tplEdit = e.target.closest('.tpl-edit-btn');
+  const tplDel  = e.target.closest('.tpl-del-btn');
+  if (tplEdit) { const id=tplEdit.dataset.tid; if(id) openTemplateModal(id); }
+  if (tplDel)  { const id=tplDel.dataset.tid;  if(id) deleteTemplate(id); }
   if (delBtn)      { const id=delBtn.dataset.oid;      if(id) delOrder(id); }
   if (expBtn)      { const id=expBtn.dataset.oid;      if(id) toggleExpand(id); }
   const commBtn = e.target.closest('.comments-btn');
@@ -1326,6 +1382,15 @@ const closeOrderModal = () => {
 function toggleMultiStage(on, skipBlank = false) {
   document.getElementById('simple-progress-section').style.display = on ? 'none' : '';
   document.getElementById('multi-stage-section').style.display = on ? '' : 'none';
+  // Hide main machine dropdown when multi-stage is on — each stage has its own
+  const machRow = document.getElementById('main-machine-row');
+  const machNote = document.getElementById('machine-note');
+  const machSel = document.getElementById('f-machine');
+  if (machRow) {
+    machSel.disabled = on;
+    machSel.style.opacity = on ? '0.35' : '1';
+    if (machNote) machNote.style.display = on ? 'inline' : 'none';
+  }
   if (on && stageFields.length === 0 && !skipBlank) addStageField();
 }
 
@@ -1335,10 +1400,25 @@ function addStageField(existing = null) {
   const fid = 'sf' + stageFieldCounter;
   stageFields.push({fid, existing});
   const editor = document.getElementById('stages-editor');
-  const div = document.createElement('div'); div.className = 'stage-item'; div.id = 'stage-item-' + fid;
-  const dlV  = existing ? normaliseDate(existing.end)||existing.end||'' : '';
+  const div = document.createElement('div');
+  div.className = 'stage-item'; div.id = 'stage-item-' + fid;
+
+  // Auto-calculate start: stage 1 = order start, others = prev stage end + 1
+  let autoStart = '';
+  if (idx === 0) {
+    autoStart = document.getElementById('f-start')?.value || '';
+  } else {
+    const prevFid = stageFields[idx-1].fid;
+    const prevEnd = document.getElementById(prevFid + '-end')?.value || '';
+    if (prevEnd) autoStart = addDays(prevEnd, 1);
+  }
+
+  const stV = existing ? normaliseDate(existing.start)||existing.start||autoStart : autoStart;
+  const enV = existing ? normaliseDate(existing.end)||existing.end||'' : '';
+  const dlV = existing ? normaliseDate(existing.deadline)||normaliseDate(existing.end)||'' : '';
   const appr = existing && existing.approvalRequired ? 'checked' : '';
   const done = existing && (existing.status==='done'||existing.status==='approved') ? 'checked' : '';
+
   div.innerHTML =
     '<div class="stage-item-head">' +
     '<div class="stage-item-seq">' + (idx+1) + '</div>' +
@@ -1346,19 +1426,66 @@ function addStageField(existing = null) {
     '<button class="btn btn-sm btn-red" style="padding:2px 8px;font-size:11px" onclick="removeStageField(\'' + fid + '\')">✕</button>' +
     '</div>' +
     '<div class="f2" style="margin-bottom:8px">' +
-    '<div><div class="mc-lbl">Stage Name</div><input id="' + fid + '-name" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.name:'') + '" placeholder="e.g. CNC Roughing"/></div>' +
-    '<div><div class="mc-lbl">Assigned To</div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.assignee?existing.assignee:'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '<div><div class="mc-lbl">Stage Name</div>' +
+    '<input id="' + fid + '-name" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.name:'') + '" placeholder="e.g. CNC Roughing"/></div>' +
+    '<div><div class="mc-lbl">Machine (optional)</div>' +
+    '<select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0">' +
+    '<option value="">— None —</option>' +
+    machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + ' — ' + m.type + '</option>').join('') +
+    '</select></div>' +
     '</div>' +
-    '<div class="f2" style="margin-bottom:8px">' +
-    '<div><div class="mc-lbl">Machine (optional)</div><select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0"><option value="">— None —</option>' + machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + ' — ' + m.type + '</option>').join('') + '</select></div>' +
-    '<div><div class="mc-lbl">Deadline</div><input id="' + fid + '-deadline" class="mc-inp" type="date" style="margin-bottom:0" value="' + dlV + '"/></div>' +
+    '<div class="f3" style="margin-bottom:8px">' +
+    '<div><div class="mc-lbl">Start Date <span style="font-size:9px;color:var(--green)">(auto)</span></div>' +
+    '<input id="' + fid + '-start" class="mc-inp" type="date" style="margin-bottom:0" value="' + stV + '" ' +
+    'oninput="onStageStartChange(' + idx + ')"/></div>' +
+    '<div><div class="mc-lbl">End Date</div>' +
+    '<input id="' + fid + '-end" class="mc-inp" type="date" style="margin-bottom:0" value="' + enV + '" ' +
+    'oninput="onStageEndChange(' + idx + ')"/></div>' +
+    '<div><div class="mc-lbl">Deadline <span style="font-size:9px;color:var(--amber)">(for reminders)</span></div>' +
+    '<input id="' + fid + '-deadline" class="mc-inp" type="date" style="margin-bottom:0" value="' + dlV + '"/></div>' +
     '</div>' +
-    '<div style="display:flex;gap:16px;align-items:center;margin-bottom:6px">' +
+    '<div><div class="mc-lbl">Assigned To</div>' +
+    '<input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.assignee?existing.assignee:'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '<div style="display:flex;gap:16px;align-items:center;margin-top:8px">' +
     '<label class="approval-toggle"><input type="checkbox" id="' + fid + '-approval" ' + appr + '/><span>Requires sample approval</span></label>' +
     '<label class="approval-toggle" style="color:var(--green)"><input type="checkbox" id="' + fid + '-done" ' + done + ' style="accent-color:var(--green)"/><span>Mark as Completed</span></label>' +
-    '</div>' +
-    '<div><div class="mc-lbl">Notes</div><input id="' + fid + '-notes" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.notes||'':'') + '" placeholder="Optional notes"/></div>';
+    '</div>';
   editor.appendChild(div);
+}
+
+
+// ── Stage date cascade ───────────────────────────────────
+// When a stage end changes, auto-update next stage's start
+function onStageEndChange(idx) {
+  if (idx >= stageFields.length - 1) return; // last stage, no next
+  const curFid  = stageFields[idx].fid;
+  const nextFid = stageFields[idx+1].fid;
+  const curEnd  = document.getElementById(curFid + '-end')?.value || '';
+  const nextStartEl = document.getElementById(nextFid + '-start');
+  if (nextStartEl && curEnd) {
+    nextStartEl.value = addDays(curEnd, 1);
+    // Cascade further if that stage also has an end date
+    onStageEndChange(idx + 1);
+  }
+}
+
+// When a stage start changes manually, just note it (no cascade upward)
+function onStageStartChange(idx) {
+  // If user manually changes stage 1 start, leave others alone
+  // Only cascade downward if no end date conflict
+}
+
+// Recalculate all stage starts from scratch based on order start
+function recalcStageStarts() {
+  const orderStart = document.getElementById('f-start')?.value || '';
+  if (!stageFields.length) return;
+  // Set stage 1 start to order start
+  const s0 = document.getElementById(stageFields[0].fid + '-start');
+  if (s0 && !s0.value && orderStart) s0.value = orderStart;
+  // Cascade through remaining stages
+  for (let i = 0; i < stageFields.length - 1; i++) {
+    onStageEndChange(i);
+  }
 }
 
 function removeStageField(fid) {
@@ -1413,8 +1540,10 @@ async function saveOrder() {
 
   let orderStart = start, orderEnd = end;
   if (multiStage && stageFields.length) {
-    // Use last stage deadline as order end date
-    const le = document.getElementById(stageFields[stageFields.length-1].fid+'-deadline')?.value || '';
+    // Use last stage END date as order end (for Gantt)
+    const fs = document.getElementById(stageFields[0].fid+'-start')?.value || '';
+    const le = document.getElementById(stageFields[stageFields.length-1].fid+'-end')?.value || '';
+    if (fs) orderStart = fs;
     if (le) orderEnd = le;
   }
 
@@ -1441,11 +1570,12 @@ async function saveOrder() {
         const sid = f.existing ? f.existing.id : ('STG-' + String(stageCounter).padStart(4,'0'));
         const stage = {
           id: sid, orderId, seq: i+1,
-          name:     document.getElementById(f.fid+'-name')?.value.trim()     || 'Stage '+(i+1),
-          machine:  document.getElementById(f.fid+'-machine')?.value || '',
+          name:     document.getElementById(f.fid+'-name')?.value.trim()       || 'Stage '+(i+1),
+          machine:  document.getElementById(f.fid+'-machine')?.value   || '',
           assignee: document.getElementById(f.fid+'-assignee')?.value.trim() || '',
-          start:    '',
-          end:      document.getElementById(f.fid+'-deadline')?.value         || '',
+          start:    document.getElementById(f.fid+'-start')?.value      || '',
+          end:      document.getElementById(f.fid+'-end')?.value        || '',
+          deadline: document.getElementById(f.fid+'-deadline')?.value   || '',
           actualEnd: '',
           status: (document.getElementById(f.fid+'-done')?.checked) ? 'done' : (f.existing ? f.existing.status : 'pending'),
           approvalRequired: document.getElementById(f.fid+'-approval')?.checked || false,
@@ -1602,13 +1732,14 @@ const hideTip = () => ttEl.style.display = 'none';
 function switchTab(t, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['gantt','orders','approvals','archive','import','machines','chat','settings'].forEach(id => {
+  ['gantt','orders','approvals','archive','import','machines','templates','chat','settings'].forEach(id => {
     document.getElementById('tab-'+id).style.display = t===id ? '' : 'none';
   });
   if (t==='orders')    renderOrders();
   if (t==='approvals') renderApprovals();
   if (t==='archive')   renderArchiveTab();
   if (t==='machines')  renderMachines();
+  if (t==='templates') renderTemplates();
   if (t==='chat')      initChat();
   if (t==='import')    { const ec=document.getElementById('export-count'); if(ec) ec.textContent=orders.length; }
 }
@@ -1683,6 +1814,211 @@ function renderAll() { renderMetrics(); renderGantt(); renderOrders(); populateM
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }, 1000);
+
+// ── Templates ────────────────────────────────────────────
+let templates = []; // loaded from sheet
+let editTemplateId = null;
+let templateStageFields = [], templateStageCounter = 0;
+
+function renderTemplates() {
+  const list = document.getElementById('templates-list');
+  if (!list) return;
+  if (!templates.length) {
+    list.innerHTML = '<div style="grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;text-align:center;color:var(--text3)"><div style="font-size:24px;margin-bottom:8px">&#128196;</div><div style="font-size:14px;font-weight:500;color:var(--text2)">No templates yet</div><div style="font-size:12px;margin-top:4px">Create a template to save your standard process for each item code</div></div>';
+    return;
+  }
+  list.innerHTML = templates.map(t => {
+    const stageCount = t.stages ? t.stages.length : 0;
+    const totalDays  = t.stages ? t.stages.reduce((s,st)=>s+(st.duration||0),0) : 0;
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+      '<div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace">' + t.itemCode + '</div>' +
+      '<div style="font-size:12px;color:var(--text3);margin-top:2px">' + (t.category||'—') + (t.owner?' · '+t.owner.split('@')[0]:'') + ' · ' + stageCount + ' stages · ~' + totalDays + ' days</div></div>' +
+      '<div style="display:flex;gap:6px">' +
+      '<button class="btn btn-sm tpl-edit-btn" data-tid="' + t.id + '">Edit</button>' +
+      '<button class="btn btn-sm btn-red tpl-del-btn" data-tid="' + t.id + '">✕</button>' +
+      '</div></div>' +
+      (t.stages&&t.stages.length ? '<div style="display:flex;flex-direction:column;gap:4px">' +
+      t.stages.map((s,i) => '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 8px;background:var(--bg3);border-radius:5px">' +
+        '<span style="color:var(--green);font-weight:600;min-width:16px">' + (i+1) + '</span>' +
+        '<span style="flex:1">' + s.name + '</span>' +
+        '<span style="color:var(--text3)">' + (machines.find(m=>m.id===s.machine)?.name||s.machine||'—') + '</span>' +
+        '<span style="color:var(--blue);font-family:monospace">' + (s.duration||0) + 'd</span>' +
+        '</div>').join('') + '</div>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function openTemplateModal(id) {
+  editTemplateId = id;
+  templateStageFields = []; templateStageCounter = 0;
+  document.getElementById('template-modal-title').textContent = id ? 'Edit Template' : 'New Template';
+  document.getElementById('t-err-msg').style.display = 'none';
+  document.getElementById('t-stages-editor').innerHTML = '';
+
+  if (id) {
+    const t = templates.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('t-itemcode').value  = t.itemCode || '';
+    document.getElementById('t-category').value  = t.category || '';
+    document.getElementById('t-owner').value     = t.owner || '';
+    document.getElementById('t-notes').value     = t.notes || '';
+    (t.stages||[]).forEach(s => addTemplateStage(s));
+  } else {
+    ['t-itemcode','t-owner','t-notes'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('t-category').value = '';
+    addTemplateStage();
+  }
+  document.getElementById('template-modal').classList.add('open');
+}
+
+const closeTemplateModal = () => {
+  document.getElementById('template-modal').classList.remove('open');
+  document.getElementById('t-stages-editor').innerHTML = '';
+  editTemplateId = null; templateStageFields = [];
+};
+
+function addTemplateStage(existing = null) {
+  templateStageCounter++;
+  const idx = templateStageFields.length;
+  const fid = 'ts' + templateStageCounter;
+  templateStageFields.push({fid, existing});
+  const editor = document.getElementById('t-stages-editor');
+  const div = document.createElement('div');
+  div.className = 'stage-item'; div.id = 'tstage-item-' + fid;
+  div.innerHTML =
+    '<div class="stage-item-head">' +
+    '<div class="stage-item-seq">' + (idx+1) + '</div>' +
+    '<div class="stage-item-title">Stage ' + (idx+1) + '</div>' +
+    '<button class="btn btn-sm btn-red" style="padding:2px 8px;font-size:11px" onclick="removeTemplateStage(\'' + fid + '\')">✕</button>' +
+    '</div>' +
+    '<div class="f2" style="margin-bottom:8px">' +
+    '<div><div class="mc-lbl">Stage Name</div><input id="' + fid + '-name" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.name||'':'') + '" placeholder="e.g. CNC Roughing"/></div>' +
+    '<div><div class="mc-lbl">Machine (optional)</div><select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0"><option value="">— None —</option>' +
+    machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + '</option>').join('') +
+    '</select></div></div>' +
+    '<div class="f3" style="margin-bottom:8px">' +
+    '<div><div class="mc-lbl">Assigned To</div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.assignee||'':'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '<div><div class="mc-lbl">Duration (days) <span style="color:var(--green);font-size:9px">for auto-dates</span></div><input id="' + fid + '-duration" class="mc-inp" type="number" min="1" value="' + (existing?existing.duration||1:1) + '" style="margin-bottom:0"/></div>' +
+    '<div><div class="mc-lbl">Deadline offset (days after start)</div><input id="' + fid + '-dloffset" class="mc-inp" type="number" min="0" value="' + (existing?existing.dlOffset||'':'') + '" placeholder="e.g. 14" style="margin-bottom:0"/></div>' +
+    '</div>' +
+    '<label class="approval-toggle"><input type="checkbox" id="' + fid + '-approval"' + (existing&&existing.approvalRequired?' checked':'') + '/><span>Requires sample approval</span></label>';
+  editor.appendChild(div);
+}
+
+function removeTemplateStage(fid) {
+  templateStageFields = templateStageFields.filter(f => f.fid !== fid);
+  document.getElementById('tstage-item-' + fid)?.remove();
+  document.querySelectorAll('#t-stages-editor .stage-item-seq').forEach((el,i) => el.textContent = i+1);
+}
+
+async function saveTemplate() {
+  const itemCode = document.getElementById('t-itemcode').value.trim().toUpperCase();
+  const em = document.getElementById('t-err-msg');
+  if (!itemCode) { em.textContent = 'Please enter an item code.'; em.style.display='block'; return; }
+  if (!templateStageFields.length) { em.textContent = 'Add at least one stage.'; em.style.display='block'; return; }
+
+  const stages = templateStageFields.map((f,i) => ({
+    seq:      i+1,
+    name:     document.getElementById(f.fid+'-name')?.value.trim() || 'Stage '+(i+1),
+    machine:  document.getElementById(f.fid+'-machine')?.value || '',
+    assignee: document.getElementById(f.fid+'-assignee')?.value.trim() || '',
+    duration: parseInt(document.getElementById(f.fid+'-duration')?.value)||1,
+    dlOffset: parseInt(document.getElementById(f.fid+'-dloffset')?.value)||0,
+    approvalRequired: document.getElementById(f.fid+'-approval')?.checked||false
+  }));
+
+  const t = {
+    id:       editTemplateId || ('TPL-' + Date.now()),
+    itemCode,
+    category: document.getElementById('t-category').value || '',
+    owner:    document.getElementById('t-owner').value.trim() || '',
+    notes:    document.getElementById('t-notes').value.trim() || '',
+    stages
+  };
+
+  try {
+    await call('saveTemplate', {template: t});
+    if (editTemplateId) {
+      const i = templates.findIndex(x => x.id === editTemplateId); templates[i] = t;
+    } else {
+      templates.push(t);
+    }
+    closeTemplateModal(); renderTemplates();
+    toast('Template saved ✓');
+  } catch(e) { em.textContent = 'Save failed: '+e.message; em.style.display='block'; }
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Delete this template?')) return;
+  try {
+    await call('deleteTemplate', {id});
+    templates = templates.filter(t => t.id !== id);
+    renderTemplates(); toast('Template deleted');
+  } catch(e) { toast('Delete failed','error'); }
+}
+
+// ── Load template into order modal ────────────────────────
+function checkTemplateMatch() {
+  const code = document.getElementById('f-part')?.value.trim().toUpperCase();
+  const match = templates.find(t => t.itemCode === code);
+  const btn  = document.getElementById('load-template-btn');
+  const hint = document.getElementById('template-match-hint');
+  if (match && btn) {
+    btn.style.display = 'inline-flex';
+    if (hint) { hint.textContent = '✓ Template found: ' + match.stages.length + ' stages, ~' + match.stages.reduce((s,st)=>s+(st.duration||0),0) + ' days'; hint.style.display='block'; }
+  } else {
+    if (btn) btn.style.display = 'none';
+    if (hint) hint.style.display = 'none';
+  }
+}
+
+function loadTemplate() {
+  const code  = document.getElementById('f-part')?.value.trim().toUpperCase();
+  const t     = templates.find(x => x.itemCode === code);
+  if (!t) { toast('No template found for ' + code, 'error'); return; }
+
+  // Fill order fields from template
+  if (t.category) document.getElementById('f-category').value = t.category;
+  if (t.owner)    document.getElementById('f-owner').value    = t.owner;
+
+  // Enable multi-stage
+  document.getElementById('f-multistage').checked = true;
+  document.getElementById('t-stages-editor') // clear first
+  document.getElementById('stages-editor').innerHTML = '';
+  stageFields = [];
+  toggleMultiStage(true, true);
+
+  // Build stages with auto-calculated dates from order start
+  const orderStart = document.getElementById('f-start')?.value || TODAY;
+  let cursor = orderStart; // rolling date pointer
+
+  t.stages.forEach((s, i) => {
+    // Start = cursor (previous stage end + 1 or order start)
+    const stageStart = cursor;
+    // End = start + duration - 1
+    const stageEnd   = addDays(stageStart, (s.duration||1) - 1);
+    // Deadline = start + dlOffset (if set), else = stageEnd
+    const stageDl    = s.dlOffset ? addDays(orderStart, s.dlOffset) : stageEnd;
+    // Next stage starts day after this ends
+    cursor = addDays(stageEnd, 1);
+
+    addStageField({
+      name:             s.name,
+      machine:          s.machine,
+      assignee:         s.assignee,
+      start:            stageStart,
+      end:              stageEnd,
+      deadline:         stageDl,
+      approvalRequired: s.approvalRequired,
+      status:           'pending'
+    });
+  });
+
+  toast('Template loaded: ' + t.stages.length + ' stages ✓');
+  document.getElementById('load-template-btn').style.display = 'none';
+  document.getElementById('template-match-hint').style.display = 'none';
+}
 
 // ── User name ─────────────────────────────────────────────
 let userName = localStorage.getItem('mpUserName') || '';
