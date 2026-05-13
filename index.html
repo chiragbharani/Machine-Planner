@@ -74,7 +74,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .btn-blue{background:var(--blue-dim);color:var(--blue);border-color:rgba(77,142,248,0.3)}
 .btn-sm{padding:4px 10px;font-size:12px}
 /* Date nav */
-.date-nav{display:flex;align-items:center;gap:8px;padding:8px 24px 14px;flex-wrap:wrap;position:sticky;top:calc(56px + 108px);z-index:39;background:var(--bg)}
+.date-nav{display:flex;align-items:center;gap:8px;padding:8px 24px 14px;flex-wrap:wrap}
 .dnbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;transition:all 0.15s}
 .dnbtn:hover{background:var(--bg3);color:var(--text)}
 .drlabel{font-size:13px;font-weight:500;background:var(--bg3);padding:5px 14px;border-radius:var(--radius);border:1px solid var(--border);white-space:nowrap}
@@ -84,7 +84,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .day-btn:hover:not(.active){background:var(--bg3);color:var(--text2)}
 /* Gantt */
 .gantt-outer{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--bg2)}
-.gantt-scroll{overflow-x:auto}
+.gantt-scroll{overflow-x:auto;overflow-y:visible}
 .gantt-inner{min-width:620px}
 .g-axis{display:flex;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:3;background:var(--bg2)}
 .g-spacer{width:160px;min-width:160px;border-right:1px solid var(--border);flex-shrink:0}
@@ -114,7 +114,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .pct-bar{height:4px;width:70px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:3px}
 .pct-fill{height:100%;border-radius:2px}
 /* Table */
-.orders-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:auto;max-height:calc(100vh - 230px)}
+.orders-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:auto;max-height:calc(100vh - 280px)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead{background:var(--bg3);position:sticky;top:0;z-index:2}
 th{text-align:left;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
@@ -293,7 +293,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
     <!-- Filter bar -->
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:10;background:var(--bg);padding:8px 0 8px;margin-top:-4px">
       <select id="filter-category" onchange="applyFilters()" style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none">
         <option value="">All Categories</option>
         <option value="Production">Production</option>
@@ -1020,8 +1020,8 @@ function renderOrders() {
       '<td>' + catBadge + '</td>' +
       '<td><span class="qty-badge">' + (o.qty||1) + '</span></td>' +
       '<td style="color:var(--text2)">' + (o.owner||'—') + '</td>' +
-      '<td>' + plannedBadge + '</td>' +
       '<td>' + mn + '</td>' +
+      '<td>' + plannedBadge + '</td>' +
       '<td>' + (dispFull(o.start)||'—') + '</td>' +
       '<td>' + (dispFull(o.end)||'—') + '</td>' +
       '<td>' + dispatchCell + '</td>' +
@@ -1345,9 +1345,12 @@ function addStageField(existing = null) {
     '<div class="stage-item-title">Stage ' + (idx+1) + '</div>' +
     '<button class="btn btn-sm btn-red" style="padding:2px 8px;font-size:11px" onclick="removeStageField(\'' + fid + '\')">✕</button>' +
     '</div>' +
-    '<div class="f3" style="margin-bottom:8px">' +
+    '<div class="f2" style="margin-bottom:8px">' +
     '<div><div class="mc-lbl">Stage Name</div><input id="' + fid + '-name" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.name:'') + '" placeholder="e.g. CNC Roughing"/></div>' +
     '<div><div class="mc-lbl">Assigned To</div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.assignee?existing.assignee:'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '</div>' +
+    '<div class="f2" style="margin-bottom:8px">' +
+    '<div><div class="mc-lbl">Machine (optional)</div><select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0"><option value="">— None —</option>' + machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + ' — ' + m.type + '</option>').join('') + '</select></div>' +
     '<div><div class="mc-lbl">Deadline</div><input id="' + fid + '-deadline" class="mc-inp" type="date" style="margin-bottom:0" value="' + dlV + '"/></div>' +
     '</div>' +
     '<div style="display:flex;gap:16px;align-items:center;margin-bottom:6px">' +
@@ -1439,7 +1442,7 @@ async function saveOrder() {
         const stage = {
           id: sid, orderId, seq: i+1,
           name:     document.getElementById(f.fid+'-name')?.value.trim()     || 'Stage '+(i+1),
-          machine:  '',
+          machine:  document.getElementById(f.fid+'-machine')?.value || '',
           assignee: document.getElementById(f.fid+'-assignee')?.value.trim() || '',
           start:    '',
           end:      document.getElementById(f.fid+'-deadline')?.value         || '',
