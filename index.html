@@ -1567,7 +1567,8 @@ async function saveOrder() {
       if (editId) { stages = stages.filter(s => s.orderId !== editId); await call('deleteOrderStages', {orderId:editId}); }
       for (let i = 0; i < stageFields.length; i++) {
         const f = stageFields[i];
-        const sid = f.existing ? f.existing.id : ('STG-' + String(stageCounter).padStart(4,'0'));
+        // f.existing.id only exists for real saved stages — template stages have no id so always generate fresh
+        const sid = (f.existing && f.existing.id) ? f.existing.id : ('STG-' + String(stageCounter).padStart(4,'0'));
         const stage = {
           id: sid, orderId, seq: i+1,
           name:     document.getElementById(f.fid+'-name')?.value.trim()       || 'Stage '+(i+1),
@@ -1582,7 +1583,7 @@ async function saveOrder() {
           approvedBy:'', approvedAt:'', rejectedNote:'',
           notes: document.getElementById(f.fid+'-notes')?.value || ''
         };
-        if (!f.existing) stageCounter++;
+        if (!(f.existing && f.existing.id)) stageCounter++; // increment for new + template stages
         await call('saveStage', {stage});
         const si = stages.findIndex(x => x.id === sid);
         if (si >= 0) stages[si] = stage; else stages.push(stage);
