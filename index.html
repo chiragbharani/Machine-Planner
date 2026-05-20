@@ -331,7 +331,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="orders-wrap">
       <table>
-        <thead><tr id="orders-thead"><th></th><th>Order ID</th><th>Part / Item</th><th>Category</th><th>Qty</th><th>Owner</th><th>Machine</th><th>Start</th><th>End</th><th>Deadline</th><th>Actual End</th><th>Days</th><th>Progress</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+        <thead><tr id="orders-thead"><th></th><th>Order ID</th><th>Part / Item</th><th>Category</th><th>Qty</th><th>Owner</th><th>Machine</th><th>Planned</th><th>Start</th><th>End</th><th>Deadline</th><th>Actual End</th><th>Days</th><th>Progress</th><th>Priority</th><th>Status</th><th></th></tr></thead>
         <tbody id="orders-body"></tbody>
       </table>
     </div>
@@ -921,7 +921,11 @@ function renderGantt() {
 
     const row = document.createElement('div'); row.className = 'g-row';
     const mc = document.createElement('div'); mc.className = 'm-col';
-    mc.innerHTML = '<div class="m-name">' + m.name + '</div><div class="m-type">' + m.type + '</div><div class="m-stat ' + (isRun?'run':'idle') + '">' + (isRun?'● RUNNING':'○ IDLE') + '</div>';
+    const isUnavailM = m.unavailable===true||m.unavailable==='TRUE';
+    mc.innerHTML = '<div class="m-name" style="' + (isUnavailM?'color:var(--red);text-decoration:line-through':'') + '">' + m.name + '</div>' +
+      '<div class="m-type">' + m.type + '</div>' +
+      '<div class="m-stat ' + (isUnavailM?'err':isRun?'run':'idle') + '">' +
+      (isUnavailM?('✕ UNAVAILABLE'+(m.reason?' — '+m.reason:'')):(isRun?'● RUNNING':'○ IDLE')) + '</div>';
     row.appendChild(mc);
 
     const tc = document.createElement('div'); tc.className = 't-col';
@@ -1279,13 +1283,26 @@ function renderMachines() {
   const g = document.getElementById('machines-grid'); if (!g) return; g.innerHTML = '';
   machines.forEach(m => {
     const card = document.createElement('div'); card.className = 'mcard';
+        const isUnavailM2 = m.unavailable===true||m.unavailable==='TRUE';
     card.innerHTML =
-      '<div class="mcard-head"><span class="mcard-id">' + m.id + '</span>' +
-      (machines.length > 1 ? '<button class="btn btn-sm btn-red" onclick="delMachine(\'' + m.id + '\')">Remove</button>' : '') +
-      '</div><div class="mc-lbl">Machine Name</div>' +
-      '<input class="mc-inp" value="' + m.name + '" oninput="updateMachine(\'' + m.id + '\',\'name\',this.value)" placeholder="e.g. CNC-1"/>' +
+      '<div class="mcard-head">' +
+        '<span class="mcard-id">' + m.id + '</span>' +
+        (isUnavailM2
+          ? '<span class="badge" style="background:var(--red-dim);color:var(--red);font-size:10px">Unavailable</span>'
+          : '<span class="badge" style="background:var(--green-dim);color:var(--green);font-size:10px">&#9679; Available</span>') +
+        (machines.length > 1 ? '<button class="btn btn-sm btn-red" onclick="delMachine(this.dataset.mid)" data-mid="' + m.id + '">Remove</button>' : '') +
+      '</div>' +
+      '<div class="mc-lbl">Machine Name</div>' +
+      '<input class="mc-inp" value="' + m.name + '" data-mid="' + m.id + '" oninput="updateMachine(this.dataset.mid,this.dataset.field,this.value)" data-field="name" placeholder="e.g. CNC-1"/>' +
       '<div class="mc-lbl">Machine Type</div>' +
-      '<input class="mc-inp" value="' + m.type + '" oninput="updateMachine(\'' + m.id + '\',\'type\',this.value)" placeholder="e.g. CNC Mill" style="margin-bottom:0"/>';
+      '<input class="mc-inp" value="' + m.type + '" data-mid="' + m.id + '" oninput="updateMachine(this.dataset.mid,this.dataset.field,this.value)" data-field="type" placeholder="e.g. CNC Mill"/>' +
+      '<div class="mc-lbl">Reason (if unavailable)</div>' +
+      '<input class="mc-inp" value="' + (m.reason||'') + '" data-mid="' + m.id + '" oninput="updateMachine(this.dataset.mid,this.dataset.field,this.value)" data-field="reason" placeholder="e.g. Under maintenance" style="margin-bottom:8px"/>' +
+      '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);cursor:pointer;border:1px solid ' + (isUnavailM2?'rgba(255,95,95,0.4)':'var(--border)') + ';background:' + (isUnavailM2?'var(--red-dim)':'var(--bg3)') + '">' +
+        '<input type="checkbox"' + (isUnavailM2?' checked':'') + ' data-mid="' + m.id + '" style="accent-color:var(--red);width:15px;height:15px" onchange="toggleMachineAvailability(this.dataset.mid,this.checked)"/>' +
+        '<span style="font-size:13px;color:' + (isUnavailM2?'var(--red)':'var(--text2)') + '">' + (isUnavailM2?'Currently Unavailable (click to restore)':'Mark as Unavailable') + '</span>' +
+      '</label>';
+
     g.appendChild(card);
   });
 }
@@ -1302,6 +1319,14 @@ async function delMachine(id) {
   machines = machines.filter(m => m.id !== id); renderAll(); renderMachines();
   try { await call('deleteMachine',{id}); } catch(e) { toast('Sync error','error'); }
 }
+async function toggleMachineAvailability(id, makeUnavailable) {
+  const m = machines.find(x => x.id === id); if (!m) return;
+  m.unavailable = makeUnavailable;
+  renderMachines(); renderGantt(); renderMetrics();
+  try { await call('saveMachine', {machine:m}); toast(makeUnavailable ? m.name+' marked unavailable' : m.name+' now available'); }
+  catch(e) { toast('Sync error','error'); }
+}
+
 async function addMachine() {
   const id = 'M' + machineCounter++;
   const m = {id, name:'Machine '+id, type:'Machine Type'};
@@ -1383,14 +1408,13 @@ const closeOrderModal = () => {
 function toggleMultiStage(on, skipBlank = false) {
   document.getElementById('simple-progress-section').style.display = on ? 'none' : '';
   document.getElementById('multi-stage-section').style.display = on ? '' : 'none';
-  // Hide main machine dropdown when multi-stage is on — each stage has its own
+  // Completely hide main machine row when multi-stage — each stage has its own machine
   const machRow = document.getElementById('main-machine-row');
-  const machNote = document.getElementById('machine-note');
   const machSel = document.getElementById('f-machine');
   if (machRow) {
-    machSel.disabled = on;
-    machSel.style.opacity = on ? '0.35' : '1';
-    if (machNote) machNote.style.display = on ? 'inline' : 'none';
+    machRow.style.display    = on ? 'none' : '';
+    machSel.disabled         = on;
+    if (on) machSel.value    = ''; // clear selection so it doesn't interfere
   }
   if (on && stageFields.length === 0 && !skipBlank) addStageField();
 }
@@ -1528,11 +1552,42 @@ async function saveOrder() {
     if (stageFields.length === 0) { em.textContent = 'Add at least one stage.'; em.style.display='block'; return; }
     for (let i = 0; i < stageFields.length; i++) {
       const f = stageFields[i];
-      const nm = document.getElementById(f.fid+'-name')?.value.trim();
-      const ss = document.getElementById(f.fid+'-start')?.value;
-      const se = document.getElementById(f.fid+'-end')?.value;
+      const nm  = document.getElementById(f.fid+'-name')?.value.trim();
+      const ss  = document.getElementById(f.fid+'-start')?.value;
+      const se  = document.getElementById(f.fid+'-end')?.value;
+      const smach = document.getElementById(f.fid+'-machine')?.value || '';
       if (!nm) { em.textContent = 'Stage '+(i+1)+': please enter a name.'; em.style.display='block'; return; }
       if (ss && se && dateLt(se, ss)) { em.textContent = 'Stage '+(i+1)+': end must be after start.'; em.style.display='block'; return; }
+      // Check stage machine conflict against other stages AND simple orders
+      if (smach && ss && se) {
+        // Against existing simple orders on this machine
+        const orderConflict = orders
+          .filter(o => o.machine===smach && String(o.id).trim()!==String(editId||'').trim() && !o.multiStage)
+          .some(o => o.start && o.end && !(dateLt(se,o.start)||dateGt(ss,o.end)));
+        if (orderConflict) {
+          em.textContent = 'Stage '+(i+1)+': machine '+( machines.find(m=>m.id===smach)?.name||smach)+' is already booked during those dates.';
+          em.style.display='block'; return;
+        }
+        // Against other stages on the same machine (from this order — different stages)
+        for (let j = 0; j < i; j++) {
+          const fj = stageFields[j];
+          const sj_mach = document.getElementById(fj.fid+'-machine')?.value||'';
+          const sj_s    = document.getElementById(fj.fid+'-start')?.value;
+          const sj_e    = document.getElementById(fj.fid+'-end')?.value;
+          if (sj_mach===smach && sj_s && sj_e && !(dateLt(se,sj_s)||dateGt(ss,sj_e))) {
+            em.textContent = 'Stage '+(i+1)+' and Stage '+(j+1)+' both use '+(machines.find(m=>m.id===smach)?.name||smach)+' on overlapping dates.';
+            em.style.display='block'; return;
+          }
+        }
+        // Against stages from OTHER multi-stage orders
+        const stageConflict = stages
+          .filter(s => s.machine===smach && String(s.orderId).trim()!==String(editId||'').trim())
+          .some(s => s.start && s.end && !(dateLt(se,s.start)||dateGt(ss,s.end)));
+        if (stageConflict) {
+          em.textContent = 'Stage '+(i+1)+': machine '+(machines.find(m=>m.id===smach)?.name||smach)+' is already booked during those dates (another order).';
+          em.style.display='block'; return;
+        }
+      }
     }
   }
 
