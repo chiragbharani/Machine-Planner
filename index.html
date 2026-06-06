@@ -291,7 +291,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="btn-row">
         <button class="btn btn-green" onclick="openOrderModal(null)">+ New Order</button>
         <button class="btn" onclick="exportCSV()">&#8595; Export CSV</button>
-        <button class="btn" id="hide-completed-btn" onclick="toggleHideCompleted()" title="Hide/show completed orders">&#128065; Hide Completed</button>
+        <button class="btn" id="hide-completed-btn" onclick="toggleHideCompleted()" title="Hide/show completed orders">&#128065; Show Completed</button>
       </div>
     </div>
     <!-- Filter bar -->
@@ -1894,12 +1894,12 @@ function switchTab(t, btn) {
 
 // ── Render all + Clock + Init ─────────────────────────────
 // ── Filter state ─────────────────────────────────────────
-let hideCompleted = false;
+let hideCompleted = true; // hide completed by default
 
 function toggleHideCompleted() {
   hideCompleted = !hideCompleted;
   const btn = document.getElementById('hide-completed-btn');
-  if (btn) btn.textContent = hideCompleted ? '👁 Show Completed' : '👁 Hide Completed';
+  if (btn) btn.innerHTML = hideCompleted ? '&#128065; Show Completed' : '&#128065; Hide Completed';
   renderOrders();
 }
 
@@ -1965,7 +1965,8 @@ setInterval(() => {
 
 // ── Customer Orders ──────────────────────────────────────
 let customerOrders = [];
-let notReqPO = null; // PO being marked as not required
+let notReqPO = null;
+let notReqRowIdx = 0; // row index for duplicate PO handling
 
 function updateCODot() {
   const dot = document.getElementById('co-dot');
@@ -2023,13 +2024,13 @@ function renderCustomerOrders() {
     const hasTemplate = templates.some(t => t.itemCode === co.giCode.toUpperCase());
     const actions = co.status === 'pending'
       ? '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-        '<button class="btn btn-sm btn-green co-plan-btn" data-po="' + co.poNumber + '" title="' + (hasTemplate?'Template found for '+co.giCode:'Create production order') + '">' +
+        '<button class="btn btn-sm btn-green co-plan-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '" title="' + (hasTemplate?'Template found for '+co.giCode:'Create production order') + '">' +
         (hasTemplate ? '&#128196; Plan' : '+ Plan') + '</button>' +
-        '<button class="btn btn-sm btn-amber co-notreq-btn" data-po="' + co.poNumber + '">Not Required</button>' +
+        '<button class="btn btn-sm btn-amber co-notreq-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '">Not Required</button>' +
         '</div>'
       : co.status === 'not_required'
-      ? '<button class="btn btn-sm co-restore-btn" data-po="' + co.poNumber + '">Restore</button>'
-      : '<button class="btn btn-sm co-unplan-btn" data-po="' + co.poNumber + '">Unplan</button>';
+      ? '<button class="btn btn-sm co-restore-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '">Restore</button>'
+      : '<button class="btn btn-sm co-unplan-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '">Unplan</button>';
 
     return '<tr style="' + (co.status==='pending'&&isOverdue?'background:rgba(255,95,95,0.04)':'') + '">' +
       '<td class="mono" style="font-size:12px;font-weight:600">' + co.poNumber + '</td>' +
@@ -2052,19 +2053,20 @@ document.addEventListener('click', function(e) {
   const unplanBtn  = e.target.closest('.co-unplan-btn');
 
   if (planBtn) {
-    const po = planBtn.dataset.po;
-    const co = customerOrders.find(c => c.poNumber === po);
+    const po = planBtn.dataset.po; const ridx = parseInt(planBtn.dataset.ridx)||0;
+    const co = customerOrders.find(c => c.poNumber === po && (c.rowIndex===ridx||ridx===0));
     if (co) openOrderFromCO(co);
   }
   if (notReqBtn) {
     notReqPO = notReqBtn.dataset.po;
+    notReqRowIdx = parseInt(notReqBtn.dataset.ridx)||0;
     document.getElementById('not-req-reason').value = '';
     document.getElementById('not-req-notes').value = '';
     document.getElementById('not-req-err').style.display = 'none';
     document.getElementById('not-req-modal').classList.add('open');
   }
-  if (restoreBtn) restoreCO(restoreBtn.dataset.po);
-  if (unplanBtn)  restoreCO(unplanBtn.dataset.po);
+  if (restoreBtn) restoreCO(restoreBtn.dataset.po, parseInt(restoreBtn.dataset.ridx)||0);
+  if (unplanBtn)  restoreCO(unplanBtn.dataset.po, parseInt(unplanBtn.dataset.ridx)||0);
 });
 
 function openOrderFromCO(co) {
@@ -2102,19 +2104,19 @@ async function confirmNotRequired() {
   document.getElementById('not-req-modal').classList.remove('open');
   renderCustomerOrders(); updateCODot();
   try {
-    await call('updateCOStatus', {poNumber: notReqPO, status:'not_required', reason:fullReason, linkedOrderId:''});
+    await call('updateCOStatus', {poNumber: notReqPO, status:'not_required', reason:fullReason, linkedOrderId:'', rowIndex:notReqRowIdx});
     toast('Marked as Not Required');
   } catch(e) { toast('Sync error','error'); }
   notReqPO = null;
 }
 
-async function restoreCO(po) {
-  const co = customerOrders.find(c => c.poNumber === po);
+async function restoreCO(po, ridx) {
+  const co = customerOrders.find(c => c.poNumber === po && (c.rowIndex===ridx||ridx===0));
   if (!co) return;
   co.status = 'pending'; co.notRequiredReason = ''; co.linkedOrderId = '';
   renderCustomerOrders(); updateCODot();
   try {
-    await call('updateCOStatus', {poNumber: po, status:'pending', reason:'', linkedOrderId:''});
+    await call('updateCOStatus', {poNumber: po, status:'pending', reason:'', linkedOrderId:'', rowIndex: co.rowIndex||0});
     toast('Restored to Pending');
   } catch(e) { toast('Sync error','error'); }
 }
