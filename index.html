@@ -451,6 +451,18 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         ② Function: <code style="background:var(--bg);padding:1px 5px;border-radius:3px;color:var(--amber)">sendEvery3DaySummary</code> → Time-driven → Day timer → 8am–9am
       </div>
     </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">&#129302; AI Planning — API Key</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+        Required for AI machine scheduling. Get your key from <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a>.<br>
+        The key is stored securely in Apps Script Properties — never in your sheet or code.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="api-key-inp" type="password" placeholder="sk-ant-api03-..." style="flex:1;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Mono',sans-serif;outline:none"/>
+        <button class="btn btn-green btn-sm" onclick="saveApiKey()">Save Key</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3)">Key is write-only — once saved it cannot be read back for security.</div>
+    </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px">
       <div style="font-size:13px;font-weight:600;margin-bottom:6px">Share With Your Team</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">Send this link. Each person pastes the Web App URL once.</div>
@@ -2584,23 +2596,29 @@ async function generateAIPlan() {
       const totalMins = Math.round(o.cycleTime * (o.qty||1));
       const daysNeeded = Math.ceil(totalMins / minsPerDay);
       const pm = o.preferredMachine ? (machines.find(m=>m.id===o.preferredMachine)?.name||'any') : 'any';
-      // Check if template has per-stage breakdown
+      // Get full stage breakdown from Item Master
       const tpl = templates.find(t => t.itemCode === o.part.toUpperCase());
-      let stageInfo = '';
-      if (tpl && tpl.stages.length > 1) {
-        stageInfo = ', Stages=[' + tpl.stages.map(s =>
-          s.name + ':' + (s.cycleTime||0) + 'min/pc@' + (machines.find(m=>m.id===s.machine)?.name||'any')
-        ).join('|') + ']';
+      let stageDetail = '';
+      if (tpl && tpl.stages && tpl.stages.length > 0) {
+        // Multi-stage: show each stage with its machine and cycle time
+        const stageLines = tpl.stages.map((s, si) => {
+          const mName = s.machineName || (machines.find(m=>m.id===s.machine)?.name) || 'any';
+          const stageMins = Math.round((s.cycleTime||0) * (o.qty||1));
+          const stageDays = Math.ceil(stageMins / minsPerDay);
+          return 'Stage' + (si+1) + ':' + s.name + '@' + mName +
+            '(CT=' + (s.cycleTime||0) + 'min/pc,TotalMins=' + stageMins + ',Days=' + stageDays + ')';
+        }).join(' → ');
+        stageDetail = ', ProcessFlow=[' + stageLines + ']';
       }
       return '- Order ' + o.id + ': ' + o.part +
         ', Qty=' + (o.qty||1) +
-        ', CycleTime=' + o.cycleTime + 'min/pc' +
-        ', TotalTime=' + totalMins + 'min' +
-        ', DaysNeeded=' + daysNeeded +
+        ', TotalCycleTime=' + o.cycleTime + 'min/pc' +
+        ', TotalProductionMins=' + totalMins +
+        ', TotalDaysIfSingleMachine=' + daysNeeded +
         ', Deadline=' + (o.dispatchDate||'none') +
         ', Priority=' + (o.priority||'Normal') +
-        ', PreferredMachine=' + pm +
-        stageInfo;
+        (o.preferredMachine ? ', PreferredMachine=' + pm : '') +
+        stageDetail;
     }).join('\n');
 
   const prompt = [
@@ -2618,51 +2636,49 @@ async function generateAIPlan() {
     orderLines,
     '',
     'INSTRUCTIONS:',
-    '1. Schedule each order on the best available machine. If order has Stages=[...] info, it means it runs on multiple machines sequentially — schedule each stage on its designated machine.',
-    '2. High priority and earlier deadlines go first.',
-    '3. Avoid double-booking — each machine runs one order/stage at a time.',
-    '4. Calculate realistic start and end dates based on DaysNeeded.',
-    '5. Flag orders that CANNOT meet their deadline with onTime:false and explain why in note.',
-    '6. For multi-stage orders, the machineId/machineName in your response should be the FIRST stage machine.',
+    '1. For orders WITH ProcessFlow: each stage runs on a SPECIFIC machine sequentially. Schedule Stage1 first, then Stage2 starts after Stage1 ends (+ 1 day), etc. Use the exact machine specified for each stage.',
+    '2. For orders WITHOUT ProcessFlow: assign the best available machine based on machine type and current bookings.',
+    '3. Prioritise by deadline (earliest first), then by priority (High > Normal > Low).',
+    '4. Avoid double-booking — each machine can only run one job at a time. Check machine bookings above.',
+    '5. For multi-stage orders, the startDate=first stage start, endDate=last stage end, daysNeeded=total across all stages.',
+    '6. Flag any order with onTime:false if it cannot finish before its deadline. Explain in note.',
+    '7. In your response, include a "stages" array inside each schedule item when the order has multiple stages.',
     '',
     'Respond ONLY with valid JSON in this exact format (no markdown, no explanation outside JSON):',
     '{',
-    '  "reasoning": "Brief explanation of your scheduling logic (2-3 sentences)",',
+    '  "reasoning": "Brief 2-3 sentence explanation of scheduling decisions",',
     '  "schedule": [',
     '    {',
     '      "orderId": "ORD-XXX",',
     '      "part": "part name",',
     '      "machineId": "M1",',
-    '      "machineName": "CNC-1",',
+    '      "machineName": "CNC-1 GI",',
     '      "startDate": "YYYY-MM-DD",',
     '      "endDate": "YYYY-MM-DD",',
-    '      "daysNeeded": 3,',
-    '      "totalMinutes": 1440,',
+    '      "daysNeeded": 6,',
+    '      "totalMinutes": 2880,',
     '      "onTime": true,',
-    '      "note": "optional note if late or any issue"',
+    '      "note": "optional note",',
+    '      "stages": [',
+    '        {"seq":1,"name":"CNC Roughing","machineId":"M1","machineName":"CNC-1","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","daysNeeded":3},',
+    '        {"seq":2,"name":"VMC Finishing","machineId":"M3","machineName":"VMC-1","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","daysNeeded":2},',
+    '        {"seq":3,"name":"Grinding","machineId":"M5","machineName":"GRD-1","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","daysNeeded":1}',
+    '      ]',
     '    }',
     '  ]',
     '}'
   ].join('\n');
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        messages: [{role:'user', content: prompt}]
-      })
-    });
+    // Route through Apps Script — it holds the API key securely
+    statusEl.textContent = 'Sending to Claude AI via Apps Script...';
+    const result = await call('aiPlan', {prompt});
 
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
+    if (!result.ok) throw new Error(result.error || 'AI planning failed');
 
-    const raw = data.content[0].text;
-    // Parse JSON response
+    const raw = result.text;
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('AI returned unexpected format');
+    if (!jsonMatch) throw new Error('AI returned unexpected format: ' + raw.substring(0,100));
     const plan = JSON.parse(jsonMatch[0]);
 
     aiPlanResult = plan.schedule || [];
@@ -2759,6 +2775,21 @@ async function applyAIPlan(orderIds) {
 
 // ── User name ─────────────────────────────────────────────
 let userName = localStorage.getItem('mpUserName') || '';
+
+async function saveApiKey() {
+  const key = document.getElementById('api-key-inp')?.value.trim();
+  if (!key) { toast('Please enter an API key','error'); return; }
+  if (!key.startsWith('sk-')) { toast('API key should start with sk-','error'); return; }
+  try {
+    const r = await call('saveApiKey', {key});
+    if (r.ok) {
+      document.getElementById('api-key-inp').value = '';
+      toast('API key saved securely ✓');
+    } else {
+      toast('Failed: ' + r.error, 'error');
+    }
+  } catch(e) { toast('Error: ' + e.message,'error'); }
+}
 
 function saveUserName() {
   const val = document.getElementById('user-name-inp').value.trim();
