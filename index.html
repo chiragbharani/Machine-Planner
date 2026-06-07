@@ -250,12 +250,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="tabs">
       <button class="tab active" onclick="switchTab('gantt',this)">Gantt</button>
       <button class="tab" onclick="switchTab('orders',this)">Orders</button>
-      <button class="tab" onclick="switchTab('approvals',this)">Approvals<span class="bdot" id="approval-dot"></span></button>
+
       <button class="tab" onclick="switchTab('archive',this)">Archive</button>
       <button class="tab" onclick="switchTab('import',this)">Import/Export</button>
       <button class="tab" onclick="switchTab('machines',this)">Machines</button>
+      <button class="tab" onclick="switchTab('aiplanning',this)">&#129302; AI Planning</button>
       <button class="tab" onclick="switchTab('customers',this)">&#128203; Customer Orders<span class="bdot" id="co-dot"></span></button>
-      <button class="tab" onclick="switchTab('templates',this)">&#128196; Templates</button>
+      <button class="tab" onclick="switchTab('templates',this)">&#128196; Item Master</button>
       <button class="tab" onclick="switchTab('chat',this)">&#128172; Chat</button>
       <button class="tab" onclick="switchTab('settings',this)">Settings</button>
     </div>
@@ -457,6 +458,107 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 </div>
+<!-- AI PLANNING TAB -->
+<div id="tab-aiplanning" style="display:none">
+  <div class="section" style="padding-top:8px">
+    <div class="section-head">
+      <span class="section-title">&#129302; AI Machine Planning</span>
+      <span style="font-size:12px;color:var(--text3)">Powered by Claude AI</span>
+    </div>
+
+    <!-- Shift config -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">&#9881; Shift Configuration</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div>
+          <div class="mc-lbl">Hours per shift</div>
+          <input id="ai-shift-hours" type="number" value="8" min="1" max="12" style="width:80px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;outline:none"/>
+        </div>
+        <div>
+          <div class="mc-lbl">Shifts per day</div>
+          <input id="ai-shifts-day" type="number" value="2" min="1" max="3" style="width:80px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;outline:none"/>
+        </div>
+        <div>
+          <div class="mc-lbl">Efficiency %</div>
+          <input id="ai-efficiency" type="number" value="80" min="50" max="100" style="width:80px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;outline:none"/>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:16px">
+          Effective capacity = shift hours × shifts/day × efficiency% minutes/day
+        </div>
+      </div>
+    </div>
+
+    <!-- Order selection -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">Select Orders to Schedule</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" onclick="aiSelectAll()">Select All Pending</button>
+          <button class="btn btn-sm" onclick="aiClearAll()">Clear</button>
+        </div>
+      </div>
+      <div id="ai-order-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead style="background:var(--bg3);position:sticky;top:0">
+            <tr>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)"><input type="checkbox" id="ai-select-all-cb" onchange="aiToggleAll(this.checked)" style="accent-color:var(--green)"/></th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Order</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Part / GI Code</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Qty</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Cycle Time (min/pc)</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Preferred Machine</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Deadline</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Priority</th>
+            </tr>
+          </thead>
+          <tbody id="ai-order-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Generate button -->
+    <div style="margin-bottom:16px">
+      <button class="btn btn-green" id="ai-generate-btn" onclick="generateAIPlan()" style="padding:10px 24px;font-size:14px">
+        &#129302; Generate AI Schedule
+      </button>
+      <span id="ai-status" style="margin-left:12px;font-size:12px;color:var(--text3)"></span>
+    </div>
+
+    <!-- AI Result -->
+    <div id="ai-result" style="display:none">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600">&#9989; Recommended Schedule</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm" onclick="aiApplySelected()" id="ai-apply-btn">Apply Selected to Orders</button>
+            <button class="btn btn-sm btn-green" onclick="aiApplyAll()" id="ai-apply-all-btn">Apply All</button>
+          </div>
+        </div>
+        <div id="ai-reasoning" style="font-size:12px;color:var(--text2);background:var(--bg3);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;line-height:1.6;border-left:3px solid var(--green)"></div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead style="background:var(--bg3)">
+              <tr>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)"><input type="checkbox" id="ai-result-all-cb" onchange="aiResultToggleAll(this.checked)" style="accent-color:var(--green)"/></th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Order</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Part</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Machine</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Start Date</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">End Date</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Days Needed</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Deadline</th>
+                <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--text3)">Status</th>
+              </tr>
+            </thead>
+            <tbody id="ai-result-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- CUSTOMER ORDERS TAB -->
 <div id="tab-customers" style="display:none">
   <div class="section" style="padding-top:8px">
@@ -548,11 +650,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div id="tab-templates" style="display:none">
   <div class="section" style="padding-top:8px">
     <div class="section-head">
-      <span class="section-title">Order Templates</span>
-      <button class="btn btn-green" onclick="openTemplateModal(null)">+ New Template</button>
+      <span class="section-title">Item Master</span>
+      <button class="btn btn-green" onclick="openTemplateModal(null)">+ New Item</button>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
-      &#128161; Templates save your standard process per item code. When adding a new order, type the item code and click <strong>Load Template</strong> to auto-fill all stages with dates calculated from the order start date.
+      &#128161; Item Master saves your standard process per item code. When adding a new order, type the item code and click <strong>Load Item</strong> to auto-fill all stages with dates calculated from the order start date.
     </div>
     <div id="templates-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px"></div>
   </div>
@@ -561,7 +663,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <!-- TEMPLATE MODAL -->
 <div class="modal-bg" id="template-modal">
   <div class="modal" style="width:580px">
-    <div class="modal-title" id="template-modal-title">New Template</div>
+    <div class="modal-title" id="template-modal-title">New Item Master</div>
     <div class="f2" style="margin-bottom:14px">
       <div class="form-row" style="margin-bottom:0">
         <label>Item Code <span style="color:var(--red)">*</span></label>
@@ -583,7 +685,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="err-msg" id="t-err-msg"></div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeTemplateModal()">Cancel</button>
-      <button class="btn btn-green" onclick="saveTemplate()">Save Template</button>
+      <button class="btn btn-green" onclick="saveTemplate()">Save Item</button>
     </div>
   </div>
 </div>
@@ -630,7 +732,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <label>Item Code / Part Name *</label>
         <div style="display:flex;gap:8px">
           <input id="f-part" placeholder="e.g. SF-1042" style="flex:1" oninput="checkTemplateMatch()"/>
-          <button class="btn btn-sm btn-blue" id="load-template-btn" onclick="loadTemplate()" style="display:none;white-space:nowrap">&#128196; Load Template</button>
+          <button class="btn btn-sm btn-blue" id="load-template-btn" onclick="loadTemplate()" style="display:none;white-space:nowrap">&#128196; Load Item</button>
         </div>
         <div id="template-match-hint" style="font-size:11px;color:var(--green);margin-top:4px;display:none"></div>
       </div>
@@ -1879,15 +1981,15 @@ const hideTip = () => ttEl.style.display = 'none';
 function switchTab(t, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['gantt','orders','approvals','archive','import','machines','templates','customers','chat','settings'].forEach(id => {
+  ['gantt','orders','archive','import','machines','templates','customers','aiplanning','chat','settings'].forEach(id => {
     document.getElementById('tab-'+id).style.display = t===id ? '' : 'none';
   });
   if (t==='orders')    renderOrders();
-  if (t==='approvals') renderApprovals();
   if (t==='archive')   renderArchiveTab();
   if (t==='machines')  renderMachines();
   if (t==='templates')  renderTemplates();
-  if (t==='customers')  renderCustomerOrders();
+  if (t==='customers')   renderCustomerOrders();
+  if (t==='aiplanning')  initAIPlanning();
   if (t==='chat')      initChat();
   if (t==='import')    { const ec=document.getElementById('export-count'); if(ec) ec.textContent=orders.length; }
 }
@@ -2024,7 +2126,7 @@ function renderCustomerOrders() {
     const hasTemplate = templates.some(t => t.itemCode === co.giCode.toUpperCase());
     const actions = co.status === 'pending'
       ? '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-        '<button class="btn btn-sm btn-green co-plan-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '" title="' + (hasTemplate?'Template found for '+co.giCode:'Create production order') + '">' +
+        '<button class="btn btn-sm btn-green co-plan-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '" title="' + (hasTemplate?'Item found for '+co.giCode:'Create production order') + '">' +
         (hasTemplate ? '&#128196; Plan' : '+ Plan') + '</button>' +
         '<button class="btn btn-sm btn-amber co-notreq-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '">Not Required</button>' +
         '</div>'
@@ -2166,16 +2268,17 @@ function renderTemplates() {
   const list = document.getElementById('templates-list');
   if (!list) return;
   if (!templates.length) {
-    list.innerHTML = '<div style="grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;text-align:center;color:var(--text3)"><div style="font-size:24px;margin-bottom:8px">&#128196;</div><div style="font-size:14px;font-weight:500;color:var(--text2)">No templates yet</div><div style="font-size:12px;margin-top:4px">Create a template to save your standard process for each item code</div></div>';
+    list.innerHTML = '<div style="grid-column:1/-1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;text-align:center;color:var(--text3)"><div style="font-size:24px;margin-bottom:8px">&#128196;</div><div style="font-size:14px;font-weight:500;color:var(--text2)">No items yet</div><div style="font-size:12px;margin-top:4px">Create an item to save your standard process for each item code</div></div>';
     return;
   }
   list.innerHTML = templates.map(t => {
     const stageCount = t.stages ? t.stages.length : 0;
     const totalDays  = t.stages ? t.stages.reduce((s,st)=>s+(st.duration||0),0) : 0;
+    const hasCycleTimes = t.stages && t.stages.some(s=>s.cycleTime>0);
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
       '<div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace">' + t.itemCode + '</div>' +
-      '<div style="font-size:12px;color:var(--text3);margin-top:2px">' + (t.category||'—') + (t.owner?' · '+t.owner.split('@')[0]:'') + ' · ' + stageCount + ' stages · ~' + totalDays + ' days</div></div>' +
+      '<div style="font-size:12px;color:var(--text3);margin-top:2px">' + (t.category||'—') + (t.owner?' · '+t.owner.split('@')[0]:'') + ' · ' + stageCount + ' stages · ~' + totalDays + ' days' + (hasCycleTimes?' · cycle times set':'') + '</div></div>' +
       '<div style="display:flex;gap:6px">' +
       '<button class="btn btn-sm tpl-edit-btn" data-tid="' + t.id + '">Edit</button>' +
       '<button class="btn btn-sm btn-red tpl-del-btn" data-tid="' + t.id + '">✕</button>' +
@@ -2239,8 +2342,11 @@ function addTemplateStage(existing = null) {
     '<div><div class="mc-lbl">Machine (optional)</div><select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0"><option value="">— None —</option>' +
     machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + '</option>').join('') +
     '</select></div></div>' +
-    '<div class="f3" style="margin-bottom:8px">' +
+    '<div class="f2" style="margin-bottom:8px">' +
     '<div><div class="mc-lbl">Assigned To</div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.assignee||'':'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    '<div><div class="mc-lbl">Cycle Time (min/pc) <span style="color:var(--amber);font-size:9px">for AI planning</span></div><input id="' + fid + '-cycletime" class="mc-inp" type="number" min="0.01" step="0.01" value="' + (existing?existing.cycleTime||'':'') + '" placeholder="e.g. 2.5" style="margin-bottom:0"/></div>' +
+    '</div>' +
+    '<div class="f2" style="margin-bottom:8px">' +
     '<div><div class="mc-lbl">Duration (days) <span style="color:var(--green);font-size:9px">for auto-dates</span></div><input id="' + fid + '-duration" class="mc-inp" type="number" min="1" value="' + (existing?existing.duration||1:1) + '" style="margin-bottom:0"/></div>' +
     '<div><div class="mc-lbl">Deadline offset (days after start)</div><input id="' + fid + '-dloffset" class="mc-inp" type="number" min="0" value="' + (existing?existing.dlOffset||'':'') + '" placeholder="e.g. 14" style="margin-bottom:0"/></div>' +
     '</div>' +
@@ -2265,8 +2371,9 @@ async function saveTemplate() {
     name:     document.getElementById(f.fid+'-name')?.value.trim() || 'Stage '+(i+1),
     machine:  document.getElementById(f.fid+'-machine')?.value || '',
     assignee: document.getElementById(f.fid+'-assignee')?.value.trim() || '',
-    duration: parseInt(document.getElementById(f.fid+'-duration')?.value)||1,
-    dlOffset: parseInt(document.getElementById(f.fid+'-dloffset')?.value)||0,
+    cycleTime: parseFloat(document.getElementById(f.fid+'-cycletime')?.value)||0,
+    duration:  parseInt(document.getElementById(f.fid+'-duration')?.value)||1,
+    dlOffset:  parseInt(document.getElementById(f.fid+'-dloffset')?.value)||0,
     approvalRequired: document.getElementById(f.fid+'-approval')?.checked||false
   }));
 
@@ -2287,7 +2394,7 @@ async function saveTemplate() {
       templates.push(t);
     }
     closeTemplateModal(); renderTemplates();
-    toast('Template saved ✓');
+    toast('Item saved ✓');
   } catch(e) { em.textContent = 'Save failed: '+e.message; em.style.display='block'; }
 }
 
@@ -2296,7 +2403,7 @@ async function deleteTemplate(id) {
   try {
     await call('deleteTemplate', {id});
     templates = templates.filter(t => t.id !== id);
-    renderTemplates(); toast('Template deleted');
+    renderTemplates(); toast('Item deleted');
   } catch(e) { toast('Delete failed','error'); }
 }
 
@@ -2308,7 +2415,7 @@ function checkTemplateMatch() {
   const hint = document.getElementById('template-match-hint');
   if (match && btn) {
     btn.style.display = 'inline-flex';
-    if (hint) { hint.textContent = '✓ Template found: ' + match.stages.length + ' stages, ~' + match.stages.reduce((s,st)=>s+(st.duration||0),0) + ' days'; hint.style.display='block'; }
+    if (hint) { hint.textContent = '✓ Item found: ' + match.stages.length + ' stages, ~' + match.stages.reduce((s,st)=>s+(st.duration||0),0) + ' days'; hint.style.display='block'; }
   } else {
     if (btn) btn.style.display = 'none';
     if (hint) hint.style.display = 'none';
@@ -2318,7 +2425,7 @@ function checkTemplateMatch() {
 function loadTemplate() {
   const code  = document.getElementById('f-part')?.value.trim().toUpperCase();
   const t     = templates.find(x => x.itemCode === code);
-  if (!t) { toast('No template found for ' + code, 'error'); return; }
+  if (!t) { toast('No item found for ' + code, 'error'); return; }
 
   // Fill order fields from template
   if (t.category) document.getElementById('f-category').value = t.category;
@@ -2357,9 +2464,297 @@ function loadTemplate() {
     });
   });
 
-  toast('Template loaded: ' + t.stages.length + ' stages ✓');
+  // Store total cycle time on the order for AI planner
+  const totalCT = t.stages.reduce((sum, s) => sum + (s.cycleTime||0), 0);
+  if (totalCT > 0) {
+    // Store in a data attribute we can read in AI planner
+    window._lastLoadedCycleTime = totalCT;
+    window._lastLoadedCycleTimeFor = t.itemCode;
+  }
+  toast('Item loaded: ' + t.stages.length + ' stages' + (totalCT > 0 ? ', cycle time: ' + totalCT + ' min/pc' : '') + ' ✓');
   document.getElementById('load-template-btn').style.display = 'none';
   document.getElementById('template-match-hint').style.display = 'none';
+}
+
+
+// ── AI PLANNING ───────────────────────────────────────────
+let aiPlanResult = []; // stores last AI plan
+
+function initAIPlanning() {
+  renderAIOrderList();
+  document.getElementById('ai-result').style.display = 'none';
+}
+
+function renderAIOrderList() {
+  const tbody = document.getElementById('ai-order-tbody'); if (!tbody) return;
+  const pending = orders.filter(o => orderStatus(o) !== 'done');
+  if (!pending.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--text3)">No active orders</td></tr>';
+    return;
+  }
+  tbody.innerHTML = pending.map(o => {
+    const mOpts = '<option value="">— AI decides —</option>' +
+      machines.filter(m => !m.unavailable).map(m =>
+        '<option value="' + m.id + '"' + (o.machine===m.id?' selected':'') + '>' + m.name + '</option>'
+      ).join('');
+    return '<tr>' +
+      '<td style="padding:6px 10px"><input type="checkbox" class="ai-order-cb" data-oid="' + o.id + '" style="accent-color:var(--green)"/></td>' +
+      '<td style="padding:6px 10px;font-family:monospace;font-size:11px;color:var(--text3)">' + o.id + '</td>' +
+      '<td style="padding:6px 10px;font-weight:500">' + o.part + '</td>' +
+      '<td style="padding:6px 10px"><span class="qty-badge">' + (o.qty||1) + '</span></td>' +
+      (() => {
+      // Auto-fill cycle time from template if available
+      const tpl = templates.find(t => t.itemCode === o.part.toUpperCase());
+      const tplCT = tpl ? tpl.stages.reduce((sum, s) => sum + (s.cycleTime||0), 0) : 0;
+      const ctVal = o.cycleTime || tplCT || '';
+      const fromTpl = tplCT > 0 && !o.cycleTime ? ' title="Auto-filled from template"' : '';
+      const ctColor = tplCT > 0 && !o.cycleTime ? 'border-color:var(--green)' : '';
+      return '<td style="padding:6px 10px"><input type="number" min="0.1" step="0.1" placeholder="e.g. 2.5" data-oid="' + o.id + '" class="ai-ct-inp" style="width:90px;padding:4px 8px;border:1px solid var(--border2);border-radius:5px;background:var(--bg3);color:var(--text);font-size:12px;outline:none;' + ctColor + '"' + fromTpl + ' value="' + ctVal + '"/>' +
+        (tplCT > 0 && !o.cycleTime ? '<div style="font-size:9px;color:var(--green);margin-top:2px">from template</div>' : '') +
+        '</td>';
+    })() +
+      '<td style="padding:6px 10px"><select data-oid="' + o.id + '" class="ai-mach-sel" style="padding:4px 8px;border:1px solid var(--border2);border-radius:5px;background:var(--bg3);color:var(--text);font-size:12px;outline:none">' + mOpts + '</select></td>' +
+      '<td style="padding:6px 10px;color:var(--amber)">' + (o.dispatchDate ? dispFull(o.dispatchDate) : '—') + '</td>' +
+      '<td style="padding:6px 10px">' + (o.priority||'Normal') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function aiSelectAll() {
+  document.querySelectorAll('.ai-order-cb').forEach(cb => cb.checked = true);
+  document.getElementById('ai-select-all-cb').checked = true;
+}
+function aiClearAll() {
+  document.querySelectorAll('.ai-order-cb').forEach(cb => cb.checked = false);
+  document.getElementById('ai-select-all-cb').checked = false;
+}
+function aiToggleAll(checked) {
+  document.querySelectorAll('.ai-order-cb').forEach(cb => cb.checked = checked);
+}
+function aiResultToggleAll(checked) {
+  document.querySelectorAll('.ai-result-cb').forEach(cb => cb.checked = checked);
+}
+
+async function generateAIPlan() {
+  // Collect selected orders + their cycle times
+  const selected = [];
+  document.querySelectorAll('.ai-order-cb:checked').forEach(cb => {
+    const oid = cb.dataset.oid;
+    const o   = orders.find(x => x.id === oid); if (!o) return;
+    const ct  = parseFloat(document.querySelector('.ai-ct-inp[data-oid="'+oid+'"]')?.value) || 0;
+    const pm  = document.querySelector('.ai-mach-sel[data-oid="'+oid+'"]')?.value || '';
+    selected.push({...o, cycleTime: ct, preferredMachine: pm});
+  });
+
+  if (!selected.length) { toast('Select at least one order to schedule','error'); return; }
+
+  const missing = selected.filter(o => !o.cycleTime);
+  if (missing.length) {
+    toast('Please enter cycle time for: ' + missing.map(o=>o.part).join(', '), 'error');
+    return;
+  }
+
+  const shiftHours   = parseFloat(document.getElementById('ai-shift-hours').value) || 8;
+  const shiftsPerDay = parseInt(document.getElementById('ai-shifts-day').value) || 2;
+  const efficiency   = parseFloat(document.getElementById('ai-efficiency').value) / 100 || 0.8;
+  const minsPerDay   = shiftHours * shiftsPerDay * 60 * efficiency;
+
+  const btn = document.getElementById('ai-generate-btn');
+  const statusEl = document.getElementById('ai-status');
+  btn.disabled = true; btn.textContent = '⏳ AI is planning...';
+  statusEl.textContent = 'Sending to Claude AI...';
+
+  // Build context for AI
+  const availMachines = machines.filter(m => !m.unavailable).map(m => ({
+    id: m.id, name: m.name, type: m.type,
+    currentlyBooked: getNextFreeDate(m.id)
+  }));
+
+  // Existing bookings per machine
+  const bookings = {};
+  machines.forEach(m => { bookings[m.name] = getNextFreeDate(m.id); });
+
+  const machineLines = availMachines.map(m =>
+    '- ' + m.name + ' (' + m.type + '): next free from ' + (m.currentlyBooked || TODAY)
+  ).join('\n');
+
+  const orderLines = selected
+    .sort((a,b) => (a.dispatchDate||'9999').localeCompare(b.dispatchDate||'9999'))
+    .map(o => {
+      const totalMins = Math.round(o.cycleTime * (o.qty||1));
+      const daysNeeded = Math.ceil(totalMins / minsPerDay);
+      const pm = o.preferredMachine ? (machines.find(m=>m.id===o.preferredMachine)?.name||'any') : 'any';
+      // Check if template has per-stage breakdown
+      const tpl = templates.find(t => t.itemCode === o.part.toUpperCase());
+      let stageInfo = '';
+      if (tpl && tpl.stages.length > 1) {
+        stageInfo = ', Stages=[' + tpl.stages.map(s =>
+          s.name + ':' + (s.cycleTime||0) + 'min/pc@' + (machines.find(m=>m.id===s.machine)?.name||'any')
+        ).join('|') + ']';
+      }
+      return '- Order ' + o.id + ': ' + o.part +
+        ', Qty=' + (o.qty||1) +
+        ', CycleTime=' + o.cycleTime + 'min/pc' +
+        ', TotalTime=' + totalMins + 'min' +
+        ', DaysNeeded=' + daysNeeded +
+        ', Deadline=' + (o.dispatchDate||'none') +
+        ', Priority=' + (o.priority||'Normal') +
+        ', PreferredMachine=' + pm +
+        stageInfo;
+    }).join('\n');
+
+  const prompt = [
+    'You are a production scheduling expert for a precision manufacturing job shop.',
+    '',
+    'SHIFT CONFIGURATION:',
+    '- ' + shiftHours + ' hours per shift, ' + shiftsPerDay + ' shifts per day',
+    '- Effective capacity: ' + Math.round(minsPerDay) + ' minutes/day per machine',
+    "- Today's date: " + TODAY,
+    '',
+    'AVAILABLE MACHINES (unavailable machines excluded):',
+    machineLines,
+    '',
+    'ORDERS TO SCHEDULE (sorted by deadline):',
+    orderLines,
+    '',
+    'INSTRUCTIONS:',
+    '1. Schedule each order on the best available machine. If order has Stages=[...] info, it means it runs on multiple machines sequentially — schedule each stage on its designated machine.',
+    '2. High priority and earlier deadlines go first.',
+    '3. Avoid double-booking — each machine runs one order/stage at a time.',
+    '4. Calculate realistic start and end dates based on DaysNeeded.',
+    '5. Flag orders that CANNOT meet their deadline with onTime:false and explain why in note.',
+    '6. For multi-stage orders, the machineId/machineName in your response should be the FIRST stage machine.',
+    '',
+    'Respond ONLY with valid JSON in this exact format (no markdown, no explanation outside JSON):',
+    '{',
+    '  "reasoning": "Brief explanation of your scheduling logic (2-3 sentences)",',
+    '  "schedule": [',
+    '    {',
+    '      "orderId": "ORD-XXX",',
+    '      "part": "part name",',
+    '      "machineId": "M1",',
+    '      "machineName": "CNC-1",',
+    '      "startDate": "YYYY-MM-DD",',
+    '      "endDate": "YYYY-MM-DD",',
+    '      "daysNeeded": 3,',
+    '      "totalMinutes": 1440,',
+    '      "onTime": true,',
+    '      "note": "optional note if late or any issue"',
+    '    }',
+    '  ]',
+    '}'
+  ].join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.content[0].text;
+    // Parse JSON response
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('AI returned unexpected format');
+    const plan = JSON.parse(jsonMatch[0]);
+
+    aiPlanResult = plan.schedule || [];
+    renderAIPlanResult(plan.reasoning, aiPlanResult, selected);
+    statusEl.textContent = 'Plan generated ✓ — ' + aiPlanResult.length + ' orders scheduled';
+    statusEl.style.color = 'var(--green)';
+
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+    toast('AI planning failed: ' + e.message, 'error');
+  }
+
+  btn.disabled = false; btn.textContent = '🤖 Generate AI Schedule';
+}
+
+function getNextFreeDate(machineId) {
+  // Find the latest end date of all orders/stages on this machine
+  const ends = [
+    ...orders.filter(o => o.machine === machineId && !o.multiStage && orderStatus(o) !== 'done').map(o => o.end),
+    ...stages.filter(s => s.machine === machineId && s.status !== 'done' && s.status !== 'approved').map(s => s.end)
+  ].filter(Boolean).sort();
+  if (!ends.length) return TODAY;
+  const last = ends[ends.length-1];
+  return dateLt(last, TODAY) ? TODAY : addDays(last, 1);
+}
+
+function renderAIPlanResult(reasoning, schedule, selectedOrders) {
+  document.getElementById('ai-result').style.display = '';
+  document.getElementById('ai-reasoning').textContent = reasoning;
+
+  const tbody = document.getElementById('ai-result-tbody');
+  tbody.innerHTML = schedule.map(s => {
+    const onTime = s.onTime !== false;
+    const statusBadge = onTime
+      ? '<span style="color:var(--green);font-weight:600">✓ On Time</span>'
+      : '<span style="color:var(--red);font-weight:600">⚠ Late</span>';
+    const o = selectedOrders.find(x => x.id === s.orderId);
+    return '<tr style="' + (!onTime?'background:rgba(255,95,95,0.04)':'') + '">' +
+      '<td style="padding:7px 10px"><input type="checkbox" class="ai-result-cb" data-oid="' + s.orderId + '" checked style="accent-color:var(--green)"/></td>' +
+      '<td style="padding:7px 10px;font-family:monospace;font-size:11px;color:var(--text3)">' + s.orderId + '</td>' +
+      '<td style="padding:7px 10px;font-weight:500">' + s.part + '</td>' +
+      '<td style="padding:7px 10px;color:var(--blue)">' + s.machineName + '</td>' +
+      '<td style="padding:7px 10px">' + dispFull(s.startDate) + '</td>' +
+      '<td style="padding:7px 10px">' + dispFull(s.endDate) + '</td>' +
+      '<td style="padding:7px 10px;font-family:monospace">' + s.daysNeeded + 'd</td>' +
+      '<td style="padding:7px 10px;color:var(--amber)">' + (o?.dispatchDate ? dispFull(o.dispatchDate) : '—') + '</td>' +
+      '<td style="padding:7px 10px">' + statusBadge + (s.note ? '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+s.note+'</div>' : '') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function aiApplySelected() {
+  const selected = [...document.querySelectorAll('.ai-result-cb:checked')].map(cb => cb.dataset.oid);
+  if (!selected.length) { toast('Select at least one order to apply','error'); return; }
+  await applyAIPlan(selected);
+}
+
+async function aiApplyAll() {
+  const all = aiPlanResult.map(s => s.orderId);
+  await applyAIPlan(all);
+}
+
+async function applyAIPlan(orderIds) {
+  const btn = document.getElementById('ai-apply-btn');
+  const btn2 = document.getElementById('ai-apply-all-btn');
+  btn.disabled = true; btn2.disabled = true;
+  let applied = 0;
+
+  for (const oid of orderIds) {
+    const plan = aiPlanResult.find(s => s.orderId === oid);
+    if (!plan) continue;
+    const o = orders.find(x => x.id === oid);
+    if (!o) continue;
+
+    // Update order with AI plan
+    o.machine    = plan.machineId || o.machine;
+    o.start      = plan.startDate;
+    o.end        = plan.endDate;
+    o.manualStatus = 'running';
+
+    try {
+      await call('saveOrder', {order: o});
+      applied++;
+    } catch(e) {
+      toast('Failed to update ' + oid + ': ' + e.message, 'error');
+    }
+  }
+
+  renderAll();
+  toast('Applied ' + applied + ' orders to schedule ✓');
+  btn.disabled = false; btn2.disabled = false;
 }
 
 // ── User name ─────────────────────────────────────────────
@@ -2486,4 +2881,4 @@ const saved = localStorage.getItem('mpSheetUrl');
 if (saved) { SHEET_URL = saved; launchApp(); }
 </script>
 </body>
-</html>
+</html>  ].join('\\n');
