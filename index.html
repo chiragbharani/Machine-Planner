@@ -254,6 +254,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <button class="tab" onclick="switchTab('archive',this)">Archive</button>
       <button class="tab" onclick="switchTab('import',this)">Import/Export</button>
       <button class="tab" onclick="switchTab('machines',this)">Machines</button>
+      <button class="tab" onclick="switchTab('production',this)">&#128202; Daily Production<span class="bdot" id="risk-dot"></span></button>
       <button class="tab" onclick="switchTab('aiplanning',this)">&#129302; AI Planning</button>
       <button class="tab" onclick="switchTab('customers',this)">&#128203; Customer Orders<span class="bdot" id="co-dot"></span></button>
       <button class="tab" onclick="switchTab('templates',this)">&#128196; Item Master</button>
@@ -266,6 +267,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <!-- GANTT -->
 <div id="tab-gantt">
+  <div id="gantt-at-risk-panel" style="padding:0 24px 4px"></div>
   <div class="date-nav">
     <button class="dnbtn" onclick="shiftView(-1)">&#8249;</button>
     <div class="drlabel" id="dr-label"></div>
@@ -470,6 +472,37 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 </div>
+<!-- DAILY PRODUCTION TAB -->
+<div id="tab-production" style="display:none">
+  <div class="section" style="padding-top:8px">
+    <div class="section-head">
+      <span class="section-title">&#128202; Daily Production Log</span>
+      <span style="font-size:12px;color:var(--text3)" id="prod-date-label"></span>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;line-height:1.7">
+      &#128161; Enter today's actual pieces produced for each running order/stage. The system calculates your real production rate and projects whether you'll hit the deadline.
+    </div>
+
+    <!-- At Risk Panel -->
+    <div id="at-risk-panel" style="margin-bottom:16px"></div>
+
+    <!-- Production entry table -->
+    <div class="section-head" style="margin-top:4px">
+      <span class="section-title">Log Today's Production</span>
+    </div>
+    <div class="orders-wrap">
+      <table>
+        <thead><tr>
+          <th>Order</th><th>Part</th><th>Stage</th><th>Machine</th>
+          <th>Required Qty</th><th>Produced So Far</th><th>Remaining</th>
+          <th>Avg Rate/day</th><th>Today's Qty</th><th>Projected End</th><th>Risk</th>
+        </tr></thead>
+        <tbody id="prod-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- AI PLANNING TAB -->
 <div id="tab-aiplanning" style="display:none">
   <div class="section" style="padding-top:8px">
@@ -924,7 +957,8 @@ async function syncNow(silent = false) {
     orders    = (d.orders || []).map(o => ({...o, id: String(o.id||'').trim()}));
     stages    = (d.stages || []).map(s => ({...s, id: String(s.id||'').trim(), orderId: String(s.orderId||'').trim()}));
     templates      = d.templates || [];
-    customerOrders = d.customerOrders || [];
+    customerOrders  = d.customerOrders || [];
+    dailyProduction = d.dailyProduction || [];
     updateCODot();
     orderCounter   = orders.length  ? Math.max(...orders.map(o  => parseInt(o.id.replace(/\D/g,''))||0))+1  : 1;
     machineCounter = machines.length? Math.max(...machines.map(m => parseInt(m.id.replace(/\D/g,''))||0))+1 : 1;
@@ -1993,7 +2027,7 @@ const hideTip = () => ttEl.style.display = 'none';
 function switchTab(t, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['gantt','orders','archive','import','machines','templates','customers','aiplanning','chat','settings'].forEach(id => {
+  ['gantt','orders','archive','import','machines','templates','customers','aiplanning','production','chat','settings'].forEach(id => {
     document.getElementById('tab-'+id).style.display = t===id ? '' : 'none';
   });
   if (t==='orders')    renderOrders();
@@ -2002,6 +2036,7 @@ function switchTab(t, btn) {
   if (t==='templates')  renderTemplates();
   if (t==='customers')   renderCustomerOrders();
   if (t==='aiplanning')  initAIPlanning();
+  if (t==='production')  renderProductionTab();
   if (t==='chat')      initChat();
   if (t==='import')    { const ec=document.getElementById('export-count'); if(ec) ec.textContent=orders.length; }
 }
@@ -2071,7 +2106,44 @@ function getFilteredOrders() {
   return filtered;
 }
 
-function renderAll() { renderMetrics(); renderGantt(); renderOrders(); populateMachineFilter(); }
+function renderAll() {
+  renderMetrics(); renderGantt(); renderOrders(); populateMachineFilter();
+  renderGanttAtRiskSummary();
+}
+
+function renderGanttAtRiskSummary() {
+  const panel = document.getElementById('gantt-at-risk-panel');
+  if (!panel) return;
+  const items = calcCascade(getTrackableItems());
+  const critical = items.filter(it => it.forecast.risk === 'missdeadline' || it.forecast.risk === 'stalled');
+  const delayed  = items.filter(it => it.forecast.risk === 'delayed');
+  const pushed   = items.filter(it => it.cascadeDelay > 0 && it.pushedByOthers);
+
+  if (!critical.length && !delayed.length && !pushed.length) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  let html = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0">';
+  if (critical.length) {
+    html += '<button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border-color:rgba(255,95,95,0.3)" onclick="switchToProduction()">&#128680; ' + critical.length + ' will miss deadline</button>';
+  }
+  if (delayed.length) {
+    html += '<button class="btn btn-sm" style="background:var(--amber-dim);color:var(--amber);border-color:rgba(245,166,35,0.3)" onclick="switchToProduction()">&#9203; ' + delayed.length + ' behind schedule</button>';
+  }
+  if (pushed.length) {
+    html += '<button class="btn btn-sm" style="background:var(--blue-dim);color:var(--blue);border-color:rgba(77,142,248,0.3)" onclick="switchToProduction()">&#8618; ' + pushed.length + ' pushed back by cascade</button>';
+  }
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function switchToProduction() {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  const btns = document.querySelectorAll('.tab');
+  btns.forEach(b => { if (b.textContent.includes('Daily Production')) b.classList.add('active'); });
+  switchTab('production', [...btns].find(b=>b.textContent.includes('Daily Production')));
+}
 
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -2771,6 +2843,260 @@ async function applyAIPlan(orderIds) {
   renderAll();
   toast('Applied ' + applied + ' orders to schedule ✓');
   btn.disabled = false; btn2.disabled = false;
+}
+
+
+// ── DAILY PRODUCTION & FORECASTING ────────────────────────
+let dailyProduction = [];
+
+// Get all production entries for a specific order+stage combo (stageId='' for simple orders)
+function getProdEntries(orderId, stageId) {
+  return dailyProduction.filter(d => d.orderId === orderId && (d.stageId||'') === (stageId||''));
+}
+
+function getCumulativeProduced(orderId, stageId) {
+  return getProdEntries(orderId, stageId).reduce((sum,d) => sum + d.qtyProduced, 0);
+}
+
+// Count distinct days with actual production logged (qty > 0)
+function getDaysLogged(orderId, stageId) {
+  return getProdEntries(orderId, stageId).filter(d => d.qtyProduced > 0).length;
+}
+
+// Calculate forecast for a single trackable item (order or stage)
+// item: {orderId, stageId, requiredQty, start, plannedEnd, deadline}
+function calcForecast(item) {
+  const cumulative = getCumulativeProduced(item.orderId, item.stageId);
+  const remaining  = Math.max(0, item.requiredQty - cumulative);
+  const daysLogged = getDaysLogged(item.orderId, item.stageId);
+
+  if (remaining <= 0) {
+    return {cumulative, remaining: 0, avgRate: null, projectedEnd: item.plannedEnd, daysNeeded: 0, daysLogged, risk: 'done'};
+  }
+
+  if (daysLogged === 0) {
+    // Nothing logged yet — use planned dates, no forecast possible
+    return {cumulative, remaining, avgRate: null, projectedEnd: item.plannedEnd, daysNeeded: null, daysLogged, risk: 'no-data'};
+  }
+
+  const avgRate = cumulative / daysLogged; // pieces per logged day
+
+  if (daysLogged === 1) {
+    // Building baseline — show preliminary rate but don't flag risk yet
+    return {cumulative, remaining, avgRate, projectedEnd: item.plannedEnd, daysNeeded: null, daysLogged, risk: 'building'};
+  }
+
+  if (avgRate <= 0) {
+    return {cumulative, remaining, avgRate: 0, projectedEnd: null, daysNeeded: null, daysLogged, risk: 'stalled'};
+  }
+
+  const daysNeeded   = Math.ceil(remaining / avgRate);
+  const projectedEnd = addDays(TODAY, daysNeeded);
+
+  // Risk levels: compare projectedEnd to deadline and plannedEnd
+  let risk = 'ontrack';
+  if (item.deadline && dateGt(projectedEnd, item.deadline)) {
+    risk = 'missdeadline'; // RED
+  } else if (item.plannedEnd && dateGt(projectedEnd, item.plannedEnd)) {
+    risk = 'delayed'; // AMBER — eating buffer but deadline still ok
+  }
+
+  return {cumulative, remaining, avgRate, projectedEnd, daysNeeded, daysLogged, risk};
+}
+
+// Build a flat list of all trackable items (orders + stages) that are active
+function getTrackableItems() {
+  const items = [];
+
+  orders.forEach(o => {
+    if (orderStatus(o) === 'done') return;
+    if (o.multiStage) {
+      stagesOf(o.id).forEach(s => {
+        if (s.status === 'done' || s.status === 'approved') return;
+        items.push({
+          orderId: o.id, stageId: s.id,
+          part: o.part, stageName: s.name,
+          machine: s.machine, requiredQty: o.qty||1,
+          start: s.start, plannedEnd: s.end,
+          deadline: s.deadline || o.dispatchDate || '',
+          priority: o.priority, owner: o.owner
+        });
+      });
+    } else {
+      items.push({
+        orderId: o.id, stageId: '',
+        part: o.part, stageName: '',
+        machine: o.machine, requiredQty: o.qty||1,
+        start: o.start, plannedEnd: o.end,
+        deadline: o.dispatchDate || '',
+        priority: o.priority, owner: o.owner
+      });
+    }
+  });
+
+  return items;
+}
+
+// ── Cascade calculation ────────────────────────────────────
+// Groups trackable items by machine, sorted by planned start.
+// Walks through each queue propagating delay to downstream items.
+function calcCascade(items) {
+  const withForecast = items.map(it => ({...it, forecast: calcForecast(it)}));
+
+  // Group by machine
+  const byMachine = {};
+  withForecast.forEach(it => {
+    if (!it.machine) return;
+    if (!byMachine[it.machine]) byMachine[it.machine] = [];
+    byMachine[it.machine].push(it);
+  });
+
+  // For each machine queue, sort by planned start and propagate delay
+  Object.values(byMachine).forEach(queue => {
+    queue.sort((a,b) => (a.start||'9999').localeCompare(b.start||'9999'));
+    let carryDelay = 0;
+    queue.forEach(it => {
+      const f = it.forecast;
+      let ownDelay = 0;
+      if (f.projectedEnd && it.plannedEnd) {
+        ownDelay = Math.max(0, diffDays(it.plannedEnd, f.projectedEnd));
+      }
+      const effectiveDelay = Math.max(ownDelay, carryDelay);
+      it.ownDelay = ownDelay;
+      it.cascadeDelay = effectiveDelay;
+      it.pushedByOthers = carryDelay > 0 && ownDelay === 0;
+      carryDelay = effectiveDelay;
+    });
+  });
+
+  return withForecast;
+}
+
+// ── At Risk Panel ──────────────────────────────────────────
+function renderAtRiskPanel() {
+  const panel = document.getElementById('at-risk-panel');
+  if (!panel) return;
+
+  const items = calcCascade(getTrackableItems());
+  const atRisk = items.filter(it => it.forecast.risk === 'missdeadline' || it.forecast.risk === 'delayed' || it.forecast.risk === 'stalled' || it.cascadeDelay > 0);
+
+  // Update tab dot
+  const dot = document.getElementById('risk-dot');
+  const criticalCount = items.filter(it => it.forecast.risk === 'missdeadline').length;
+  if (dot) dot.className = 'bdot' + (criticalCount > 0 ? ' show' : '');
+
+  if (!atRisk.length) {
+    panel.innerHTML = '<div style="background:var(--green-dim);border:1px solid rgba(0,201,141,0.3);border-radius:var(--radius-lg);padding:16px;text-align:center;color:var(--green);font-size:13px">&#9989; All tracked orders/stages are on schedule</div>';
+    return;
+  }
+
+  // Sort: missdeadline first, then delayed, then cascade-only
+  const order = {missdeadline:0, delayed:1, ontrack:2, 'no-data':2, stalled:1, building:2, done:3};
+  atRisk.sort((a,b) => (order[a.forecast.risk]??2) - (order[b.forecast.risk]??2) || b.cascadeDelay - a.cascadeDelay);
+
+  panel.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">&#9888; At Risk — ' + atRisk.length + ' item' + (atRisk.length>1?'s':'') + '</div>' +
+    atRisk.map(it => {
+      const f = it.forecast;
+      const mName = machines.find(m=>m.id===it.machine)?.name || it.machine || '—';
+      const label = it.part + (it.stageName ? ' — ' + it.stageName : '');
+
+      let mainMsg = '', mainColor = 'var(--amber)', bg = 'var(--amber-dim)', border='rgba(245,166,35,0.3)';
+      if (f.risk === 'missdeadline') {
+        mainMsg = '&#128680; Will MISS deadline (' + dispFull(it.deadline) + ') — projected ' + dispFull(f.projectedEnd) + ' (' + (f.daysNeeded - diffDays(TODAY, it.deadline)) + ' days late)';
+        mainColor = 'var(--red)'; bg = 'var(--red-dim)'; border='rgba(255,95,95,0.3)';
+      } else if (f.risk === 'delayed') {
+        mainMsg = '&#9203; Behind schedule — projected ' + dispFull(f.projectedEnd) + ' vs planned ' + dispFull(it.plannedEnd) + ' (deadline ' + dispFull(it.deadline) + ' still OK)';
+      } else if (f.risk === 'stalled') {
+        mainMsg = '&#9888; Zero production logged — cannot project completion';
+        mainColor = 'var(--red)'; bg = 'var(--red-dim)'; border='rgba(255,95,95,0.3)';
+      } else if (it.cascadeDelay > 0 && it.pushedByOthers) {
+        mainMsg = '&#8618; Pushed back ' + it.cascadeDelay + ' day' + (it.cascadeDelay>1?'s':'') + ' due to delay on ' + mName + ' from an earlier job';
+        mainColor='var(--blue)'; bg='var(--blue-dim)'; border='rgba(77,142,248,0.3)';
+      }
+
+      const rateInfo = f.avgRate
+        ? 'Rate: ' + f.avgRate.toFixed(1) + ' pcs/day · Remaining: ' + f.remaining + ' pcs'
+        : (f.risk==='no-data' ? 'No production data logged yet' : '');
+
+      return '<div style="background:' + bg + ';border:1px solid ' + border + ';border-radius:var(--radius);padding:10px 14px;margin-bottom:8px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">' +
+        '<div>' +
+        '<div style="font-size:13px;font-weight:600;color:var(--text)">' + it.orderId + ' — ' + label + '</div>' +
+        '<div style="font-size:12px;color:' + mainColor + ';margin-top:3px">' + mainMsg + '</div>' +
+        (rateInfo ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + rateInfo + ' · Machine: ' + mName + '</div>' : '') +
+        '</div>' +
+        '<button class="btn btn-sm" onclick="openOrderModal(\'' + it.orderId + '\')">Open</button>' +
+        '</div></div>';
+    }).join('');
+}
+
+// ── Production Entry Table ─────────────────────────────────
+function renderProductionTab() {
+  document.getElementById('prod-date-label').textContent = 'Logging for: ' + dispFull(TODAY);
+  renderAtRiskPanel();
+
+  const tbody = document.getElementById('prod-body');
+  const items = getTrackableItems();
+
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px">No active orders to track</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = items.map(it => {
+    const f = calcForecast(it);
+    const mName = machines.find(m=>m.id===it.machine)?.name || it.machine || '—';
+    const todayEntry = getProdEntries(it.orderId, it.stageId).find(d => d.date === TODAY);
+    const todayVal = todayEntry ? todayEntry.qtyProduced : '';
+
+    const riskBadge =
+      f.risk === 'missdeadline' ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">&#128680; Miss Deadline</span>' :
+      f.risk === 'delayed'      ? '<span class="badge" style="background:var(--amber-dim);color:var(--amber)">&#9203; Delayed</span>' :
+      f.risk === 'stalled'      ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">&#9888; Stalled</span>' :
+      f.risk === 'building'     ? '<span class="badge" style="background:var(--blue-dim);color:var(--blue)" title="Need 1 more day of data before forecasting">&#128202; Building (1/2)</span>' :
+      f.risk === 'no-data'      ? '<span class="badge" style="background:var(--bg3);color:var(--text3)">No data</span>' :
+      f.risk === 'done'         ? '<span class="badge badge-done">Done</span>' :
+                                   '<span class="badge" style="background:var(--green-dim);color:var(--green)">&#9989; On Track</span>';
+
+    const dataKey = it.orderId + '::' + (it.stageId||'');
+
+    return '<tr>' +
+      '<td class="mono" style="font-size:11px;color:var(--text3)">' + it.orderId + '</td>' +
+      '<td style="font-weight:500">' + it.part + '</td>' +
+      '<td style="color:var(--text2);font-size:12px">' + (it.stageName || '—') + '</td>' +
+      '<td style="color:var(--blue)">' + mName + '</td>' +
+      '<td class="mono">' + it.requiredQty + '</td>' +
+      '<td class="mono" style="color:var(--green)">' + f.cumulative + '</td>' +
+      '<td class="mono">' + f.remaining + '</td>' +
+      '<td class="mono" style="font-size:12px' + (f.risk==='building'?';font-style:italic;color:var(--text3)':'') + '">' + (f.avgRate ? f.avgRate.toFixed(1) + (f.risk==='building'?' (early)':'') : '—') + '</td>' +
+      '<td><input type="number" min="0" class="prod-inp" data-key="' + dataKey + '" value="' + todayVal + '" placeholder="0" style="width:70px;padding:4px 8px;border:1px solid var(--border2);border-radius:5px;background:var(--bg3);color:var(--text);font-size:12px;outline:none"/></td>' +
+      '<td style="font-size:12px;color:' + (f.risk==='missdeadline'?'var(--red)':f.risk==='delayed'?'var(--amber)':'var(--text2)') + '">' + (f.projectedEnd ? dispFull(f.projectedEnd) : '—') + '</td>' +
+      '<td>' + riskBadge + '</td>' +
+      '</tr>';
+  }).join('');
+
+  // Wire up save-on-change for production inputs
+  document.querySelectorAll('.prod-inp').forEach(inp => {
+    inp.addEventListener('change', () => saveProductionEntry(inp));
+  });
+}
+
+let prodSaveTimers = {};
+async function saveProductionEntry(inp) {
+  const [orderId, stageId] = inp.dataset.key.split('::');
+  const qty = parseInt(inp.value) || 0;
+  const entry = {date: TODAY, orderId, stageId, qtyProduced: qty, loggedBy: userName || 'Unknown'};
+
+  // Update local cache
+  const existing = dailyProduction.find(d => d.orderId===orderId && (d.stageId||'')===stageId && d.date===TODAY);
+  if (existing) existing.qtyProduced = qty;
+  else dailyProduction.push({...entry, loggedAt: new Date().toISOString()});
+
+  try {
+    await call('saveProduction', {entry});
+    renderProductionTab(); // refresh forecast
+    toast('Production logged ✓');
+  } catch(e) { toast('Sync error: '+e.message,'error'); }
 }
 
 // ── User name ─────────────────────────────────────────────
