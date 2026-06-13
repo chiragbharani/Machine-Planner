@@ -2905,6 +2905,9 @@ function calcForecast(item) {
 }
 
 // Build a flat list of all trackable items (orders + stages) that are active
+// Only include items that:
+// 1. Have a machine assigned (not "— None —")
+// 2. Have actually started — start date <= TODAY (excludes future-planned stages/orders)
 function getTrackableItems() {
   const items = [];
 
@@ -2913,6 +2916,8 @@ function getTrackableItems() {
     if (o.multiStage) {
       stagesOf(o.id).forEach(s => {
         if (s.status === 'done' || s.status === 'approved') return;
+        if (!s.machine) return;                         // no machine tagged — skip
+        if (!s.start || dateGt(s.start, TODAY)) return;  // not started yet — skip
         items.push({
           orderId: o.id, stageId: s.id,
           part: o.part, stageName: s.name,
@@ -2923,6 +2928,8 @@ function getTrackableItems() {
         });
       });
     } else {
+      if (!o.machine) return;                          // no machine tagged — skip
+      if (!o.start || dateGt(o.start, TODAY)) return;   // not started yet — skip
       items.push({
         orderId: o.id, stageId: '',
         part: o.part, stageName: '',
