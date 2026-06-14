@@ -492,9 +492,20 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <!-- Filter bar -->
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-      <select id="prod-filter-machine" onchange="renderProductionTab()" style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none">
-        <option value="">All Machines</option>
-      </select>
+      <div style="position:relative">
+        <button class="btn btn-sm" id="prod-machine-btn" onclick="toggleProdMachineDropdown()" style="display:flex;align-items:center;gap:6px">
+          <span id="prod-machine-label">All Machines</span>
+          <span style="font-size:10px;color:var(--text3)">&#9660;</span>
+        </button>
+        <div id="prod-machine-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:30;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,0.4);width:240px;padding:8px">
+          <input id="prod-machine-search" type="text" placeholder="Search machines..." oninput="renderProdMachineList()" style="width:100%;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none;margin-bottom:6px"/>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <button class="btn btn-sm" style="flex:1;padding:4px" onclick="prodMachineSelectAll()">Select All</button>
+            <button class="btn btn-sm" style="flex:1;padding:4px" onclick="prodMachineClearAll()">Clear</button>
+          </div>
+          <div id="prod-machine-list" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
+        </div>
+      </div>
       <select id="prod-filter-risk" onchange="renderProductionTab()" style="padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none">
         <option value="">All Statuses</option>
         <option value="pending">Not Logged Today</option>
@@ -3056,23 +3067,90 @@ function renderAtRiskPanel() {
 }
 
 // ── Production Entry Table ─────────────────────────────────
-function clearProdFilters() {
-  document.getElementById('prod-filter-machine').value = '';
-  document.getElementById('prod-filter-risk').value = '';
-  document.getElementById('prod-search').value = '';
+// Multi-select machine filter — selectedProdMachines is empty set = "All Machines"
+let selectedProdMachines = new Set();
+
+function toggleProdMachineDropdown() {
+  const dd = document.getElementById('prod-machine-dropdown');
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    document.getElementById('prod-machine-search').value = '';
+    renderProdMachineList();
+    document.getElementById('prod-machine-search').focus();
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const dd  = document.getElementById('prod-machine-dropdown');
+  const btn = document.getElementById('prod-machine-btn');
+  if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target !== btn && !btn?.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+function getUsedProdMachines() {
+  const allItems = getTrackableItems();
+  const usedMachineIds = [...new Set(allItems.map(it => it.machine))];
+  return machines.filter(m => usedMachineIds.includes(m.id));
+}
+
+function renderProdMachineList() {
+  const list = document.getElementById('prod-machine-list');
+  if (!list) return;
+  const search = (document.getElementById('prod-machine-search')?.value || '').toLowerCase().trim();
+  const usedMachines = getUsedProdMachines().filter(m => m.name.toLowerCase().includes(search));
+
+  if (!usedMachines.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;text-align:center">No machines found</div>';
+    return;
+  }
+
+  list.innerHTML = usedMachines.map(m => {
+    const checked = selectedProdMachines.has(m.id) ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;font-size:12px" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<input type="checkbox" class="prod-machine-cb" data-mid="' + m.id + '" ' + checked + ' style="accent-color:var(--green)" onchange="toggleProdMachine(\'' + m.id + '\',this.checked)"/>' +
+      '<span>' + m.name + '</span>' +
+      '</label>';
+  }).join('');
+}
+
+function toggleProdMachine(mid, checked) {
+  if (checked) selectedProdMachines.add(mid); else selectedProdMachines.delete(mid);
+  updateProdMachineLabel();
   renderProductionTab();
 }
 
-function populateProdMachineFilter() {
-  const sel = document.getElementById('prod-filter-machine');
-  if (!sel) return;
-  const cur = sel.value;
-  const allItems = getTrackableItems();
-  const usedMachineIds = [...new Set(allItems.map(it => it.machine))];
-  const usedMachines = machines.filter(m => usedMachineIds.includes(m.id));
-  sel.innerHTML = '<option value="">All Machines</option>' +
-    usedMachines.map(m => '<option value="' + m.id + '">' + m.name + '</option>').join('');
-  sel.value = cur;
+function prodMachineSelectAll() {
+  getUsedProdMachines().forEach(m => selectedProdMachines.add(m.id));
+  renderProdMachineList(); updateProdMachineLabel(); renderProductionTab();
+}
+
+function prodMachineClearAll() {
+  selectedProdMachines.clear();
+  renderProdMachineList(); updateProdMachineLabel(); renderProductionTab();
+}
+
+function updateProdMachineLabel() {
+  const lbl = document.getElementById('prod-machine-label');
+  if (!lbl) return;
+  const n = selectedProdMachines.size;
+  if (n === 0) lbl.textContent = 'All Machines';
+  else if (n === 1) {
+    const m = machines.find(x => x.id === [...selectedProdMachines][0]);
+    lbl.textContent = m ? m.name : '1 machine';
+  } else {
+    lbl.textContent = n + ' machines';
+  }
+}
+
+function clearProdFilters() {
+  selectedProdMachines.clear();
+  updateProdMachineLabel();
+  document.getElementById('prod-filter-risk').value = '';
+  document.getElementById('prod-search').value = '';
+  renderProductionTab();
 }
 
 function renderProductionTab() {
@@ -3084,11 +3162,11 @@ function renderProductionTab() {
   let items = getTrackableItems();
 
   // Apply filters
-  const fMachine = document.getElementById('prod-filter-machine')?.value || '';
   const fRisk    = document.getElementById('prod-filter-risk')?.value || '';
   const fSearch  = (document.getElementById('prod-search')?.value || '').toLowerCase().trim();
 
-  if (fMachine) items = items.filter(it => it.machine === fMachine);
+  // Multi-select machine filter — empty set means show all
+  if (selectedProdMachines.size > 0) items = items.filter(it => selectedProdMachines.has(it.machine));
   if (fSearch) items = items.filter(it =>
     it.part.toLowerCase().includes(fSearch) || it.orderId.toLowerCase().includes(fSearch));
   if (fRisk === 'pending') {
