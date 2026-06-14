@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#0f1117;--bg2:#181c27;--bg3:#1f2433;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--text:#e8eaf2;--text2:#8b90a8;--text3:#555a72;--green:#00c98d;--green-dim:rgba(0,201,141,0.12);--amber:#f5a623;--amber-dim:rgba(245,166,35,0.12);--red:#ff5f5f;--red-dim:rgba(255,95,95,0.12);--blue:#4d8ef8;--blue-dim:rgba(77,142,248,0.12);--purple:#9b7eff;--purple-dim:rgba(155,126,255,0.12);--radius:8px;--radius-lg:12px}
+[data-theme="light"]{--bg:#f4f6fb;--bg2:#ffffff;--bg3:#edf0f7;--border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);--text:#1a1d2e;--text2:#4a5068;--text3:#9099b8;--green:#00a572;--green-dim:rgba(0,165,114,0.1);--amber:#c97e00;--amber-dim:rgba(201,126,0,0.1);--red:#d93636;--red-dim:rgba(217,54,54,0.1);--blue:#2b6fd4;--blue-dim:rgba(43,111,212,0.1);--purple:#6b52d4;--purple-dim:rgba(107,82,212,0.1)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
 .mono{font-family:monospace}
@@ -66,7 +67,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;font-size:13px;color:var(--text2);font-family:'IBM Plex Sans',sans-serif;transition:all 0.15s}
 .btn:hover:not(:disabled){background:var(--bg3);color:var(--text)}
 .btn:disabled{opacity:0.45;cursor:not-allowed}
-.btn-green{background:var(--green);color:#001a10;border-color:var(--green);font-weight:600}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green);font-weight:600}
 .btn-green:hover:not(:disabled){background:#00e5a0;border-color:#00e5a0;color:#001a10}
 .btn-red{background:var(--red-dim);color:var(--red);border-color:rgba(255,95,95,0.3)}
 .btn-red:hover{background:rgba(255,95,95,0.25)}
@@ -116,7 +117,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 /* Table */
 .orders-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:auto;max-height:calc(100vh - 280px)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-thead{background:var(--bg3);position:sticky;top:0;z-index:2}
+thead{background:var(--bg3);position:sticky;top:0;z-index:2;color:var(--text)}
 th{text-align:left;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
 tr:last-child td{border-bottom:none}
@@ -480,7 +481,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <span style="font-size:12px;color:var(--text3)" id="prod-date-label"></span>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;line-height:1.7">
-      &#128161; Enter today's actual pieces produced for each running order/stage. The system calculates your real production rate and projects whether you'll hit the deadline.
+      &#128161; Select machines to filter, then <strong>tick the items</strong> you want to track daily — the system remembers your selection every session. Use <strong>✕ Clear</strong> to reset.
     </div>
 
     <!-- At Risk Panel -->
@@ -522,6 +523,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="orders-wrap">
       <table>
         <thead><tr>
+          <th style="width:32px"><input type="checkbox" id="prod-select-all-cb" onchange="prodSelectAllItems(this.checked)" style="accent-color:var(--green)" title="Select/deselect all visible"/></th>
           <th>Order</th><th>Part</th><th>Stage</th><th>Machine</th>
           <th>Required Qty</th><th>Produced So Far</th><th>Remaining</th>
           <th>Avg Rate/day</th><th>Today's Qty</th><th>Projected End</th><th>Risk</th>
@@ -1053,6 +1055,7 @@ async function connectSheet() {
 }
 
 function launchApp() {
+  loadTheme();
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('main-app').style.display = '';
   // Restore saved username
@@ -3070,6 +3073,28 @@ function renderAtRiskPanel() {
 // Multi-select machine filter — selectedProdMachines is empty set = "All Machines"
 let selectedProdMachines = new Set();
 
+// Persistent item selection — stored in localStorage as Set of "orderId::stageId" keys
+// Empty = show all items for selected machines (first session behaviour)
+// Non-empty = show only these specific items (remembered across sessions)
+let selectedProdItems = new Set();
+
+function saveProdPrefs() {
+  try {
+    localStorage.setItem('prodMachines', JSON.stringify([...selectedProdMachines]));
+    localStorage.setItem('prodItems',    JSON.stringify([...selectedProdItems]));
+  } catch(e) {}
+}
+
+function loadProdPrefs() {
+  try {
+    const m = localStorage.getItem('prodMachines');
+    const it = localStorage.getItem('prodItems');
+    if (m) JSON.parse(m).forEach(id => selectedProdMachines.add(id));
+    if (it) JSON.parse(it).forEach(k  => selectedProdItems.add(k));
+    updateProdMachineLabel();
+  } catch(e) {}
+}
+
 function toggleProdMachineDropdown() {
   const dd = document.getElementById('prod-machine-dropdown');
   const isOpen = dd.style.display !== 'none';
@@ -3145,8 +3170,49 @@ function updateProdMachineLabel() {
   }
 }
 
+// Toggle individual item selection (persisted)
+function toggleProdItem(key, checked) {
+  if (checked) selectedProdItems.add(key);
+  else         selectedProdItems.delete(key);
+  saveProdPrefs();
+  // Update select-all checkbox state
+  const allCbs = document.querySelectorAll('.prod-item-cb');
+  const allChecked = [...allCbs].every(cb => cb.checked);
+  const selAll = document.getElementById('prod-select-all-cb');
+  if (selAll) selAll.checked = allChecked;
+  // Update count
+  const countEl = document.getElementById('prod-count');
+  const allCount = getTrackableItems().length;
+  if (countEl) {
+    const curShown = document.querySelectorAll('#prod-body tr').length;
+    const selInfo = selectedProdItems.size > 0 ? ' · ' + selectedProdItems.size + ' pinned' : '';
+    countEl.textContent = curShown + ' of ' + allCount + ' shown' + selInfo;
+  }
+}
+
+// Select/deselect all visible items
+function prodSelectAllItems(checked) {
+  document.querySelectorAll('.prod-item-cb').forEach(cb => {
+    const key = cb.dataset.key;
+    if (checked) selectedProdItems.add(key);
+    else         selectedProdItems.delete(key);
+    cb.checked = checked;
+  });
+  saveProdPrefs();
+  renderProductionTab();
+}
+
+// Clear item pin selection — back to showing all
+function prodClearItemSelection() {
+  selectedProdItems.clear();
+  saveProdPrefs();
+  renderProductionTab();
+}
+
 function clearProdFilters() {
   selectedProdMachines.clear();
+  selectedProdItems.clear();
+  saveProdPrefs();
   updateProdMachineLabel();
   document.getElementById('prod-filter-risk').value = '';
   document.getElementById('prod-search').value = '';
@@ -3156,6 +3222,8 @@ function clearProdFilters() {
 function renderProductionTab() {
   document.getElementById('prod-date-label').textContent = 'Logging for: ' + dispFull(TODAY);
   renderAtRiskPanel();
+  // Restore persisted selection on first load
+  if (!renderProductionTab._prefsLoaded) { loadProdPrefs(); renderProductionTab._prefsLoaded = true; }
   const tbody = document.getElementById('prod-body');
   let items = getTrackableItems();
 
@@ -3165,6 +3233,8 @@ function renderProductionTab() {
 
   // Multi-select machine filter — empty set means show all
   if (selectedProdMachines.size > 0) items = items.filter(it => selectedProdMachines.has(it.machine));
+  // Persistent item filter — if items selected, show only those
+  if (selectedProdItems.size > 0) items = items.filter(it => selectedProdItems.has(it.orderId + '::' + (it.stageId||'')));
   if (fSearch) items = items.filter(it =>
     it.part.toLowerCase().includes(fSearch) || it.orderId.toLowerCase().includes(fSearch));
   if (fRisk === 'pending') {
@@ -3175,10 +3245,15 @@ function renderProductionTab() {
 
   const countEl = document.getElementById('prod-count');
   const allCount = getTrackableItems().length;
-  if (countEl) countEl.textContent = items.length + ' of ' + allCount + ' shown';
+  if (countEl) {
+    const selInfo = selectedProdItems.size > 0 ? ' · ' + selectedProdItems.size + ' pinned' : '';
+    countEl.textContent = items.length + ' of ' + allCount + ' shown' + selInfo;
+  }
 
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px">No matching orders/stages</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:24px">' +
+      (selectedProdItems.size > 0 ? '&#128195; Your saved selection has no active items — <button class="btn btn-sm" onclick="prodClearItemSelection()" style="margin-left:6px">Show All</button>' : 'No matching orders/stages') +
+      '</td></tr>';
     return;
   }
 
@@ -3199,7 +3274,10 @@ function renderProductionTab() {
 
     const dataKey = it.orderId + '::' + (it.stageId||'');
 
-    return '<tr>' +
+    const itemKey = it.orderId + '::' + (it.stageId||'');
+    const isSelected = selectedProdItems.size === 0 || selectedProdItems.has(itemKey);
+    return '<tr' + (selectedProdItems.has(itemKey) ? ' style="background:rgba(0,201,141,0.04)"' : '') + '>' +
+      '<td style="padding:4px 8px"><input type="checkbox" class="prod-item-cb" data-key="' + itemKey + '" ' + (selectedProdItems.has(itemKey)?'checked':'') + ' onchange="toggleProdItem(this.dataset.key,this.checked)" style="accent-color:var(--green)"/></td>' +
       '<td class="mono" style="font-size:11px;color:var(--text3)">' + it.orderId + '</td>' +
       '<td style="font-weight:500">' + it.part + '</td>' +
       '<td style="color:var(--text2);font-size:12px">' + (it.stageName || '—') + '</td>' +
@@ -3236,6 +3314,26 @@ async function saveProductionEntry(inp) {
     renderProductionTab(); // refresh forecast
     toast('Production logged ✓');
   } catch(e) { toast('Sync error: '+e.message,'error'); }
+}
+
+// ── Theme ─────────────────────────────────────────────────
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = theme === 'light' ? '☾' : '☀';
+  try { localStorage.setItem('mpTheme', theme); } catch(e) {}
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+function loadTheme() {
+  try {
+    const saved = localStorage.getItem('mpTheme') || 'dark';
+    applyTheme(saved);
+  } catch(e) { applyTheme('dark'); }
 }
 
 // ── User name ─────────────────────────────────────────────
