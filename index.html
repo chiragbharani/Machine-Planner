@@ -2945,8 +2945,8 @@ function getTrackableItems() {
     if (o.multiStage) {
       stagesOf(o.id).forEach(s => {
         if (s.status === 'done' || s.status === 'approved') return;
-        if (!s.machine) return;                         // no machine tagged — skip
-        if (!s.start || dateGt(s.start, TODAY)) return;  // not started yet — skip
+        if (!s.machine) return;                           // no machine tagged — skip
+        if (s.start && dateGt(s.start, TODAY)) return;   // future start — skip
         items.push({
           orderId: o.id, stageId: s.id,
           part: o.part, stageName: s.name,
@@ -2957,8 +2957,8 @@ function getTrackableItems() {
         });
       });
     } else {
-      if (!o.machine) return;                          // no machine tagged — skip
-      if (!o.start || dateGt(o.start, TODAY)) return;   // not started yet — skip
+      if (!o.machine) return;                            // no machine tagged — skip
+      if (o.start && dateGt(o.start, TODAY)) return;    // future start — skip
       items.push({
         orderId: o.id, stageId: '',
         part: o.part, stageName: '',
@@ -3379,4 +3379,4 @@ const saved = localStorage.getItem('mpSheetUrl');
 if (saved) { SHEET_URL = saved; launchApp(); }
 </script>
 </body>
-</html>  ].join('\\n');
+</html>
