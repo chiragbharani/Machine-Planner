@@ -3320,7 +3320,7 @@ async function saveProductionEntry(inp) {
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   const btn = document.getElementById('theme-toggle-btn');
-  if (btn) btn.textContent = theme === 'light' ? '☾' : '☀';
+  if (btn) btn.textContent = theme === 'light' ? '☀️' : '🌙';
   try { localStorage.setItem('mpTheme', theme); } catch(e) {}
 }
 
