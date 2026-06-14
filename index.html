@@ -3156,8 +3156,6 @@ function clearProdFilters() {
 function renderProductionTab() {
   document.getElementById('prod-date-label').textContent = 'Logging for: ' + dispFull(TODAY);
   renderAtRiskPanel();
-  populateProdMachineFilter();
-
   const tbody = document.getElementById('prod-body');
   let items = getTrackableItems();
 
