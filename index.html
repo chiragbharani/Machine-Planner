@@ -527,7 +527,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <th style="width:32px"><input type="checkbox" id="prod-select-all-cb" onchange="prodSelectAllItems(this.checked)" style="accent-color:var(--green)" title="Select/deselect all visible"/></th>
           <th>Order</th><th>Part</th><th>Stage</th><th>Machine</th>
           <th>Required Qty</th><th>Produced So Far</th><th>Remaining</th>
-          <th>Avg Rate/day</th><th>Today's Qty</th><th>Projected End</th><th>Risk</th>
+          <th>Avg Rate/day</th><th>Today&#39;s Qty</th><th>Projected End</th><th>Risk</th>
         </tr></thead>
         <tbody id="prod-body"></tbody>
       </table>
@@ -2950,8 +2950,12 @@ function getTrackableItems() {
     if (o.multiStage) {
       stagesOf(o.id).forEach(s => {
         if (s.status === 'done' || s.status === 'approved') return;
-        if (!s.machine) return;                           // no machine tagged — skip
-        if (s.start && dateGt(s.start, TODAY)) return;   // future start — skip
+        if (!s.machine) return;                             // no machine — skip
+        if (s.start && dateGt(s.start, TODAY)) return;     // future start — skip
+        // Hide if planned end is in the past AND no production logged (likely forgotten/stale)
+        // But keep if production was logged — still needs tracking
+        const hasLogs = getCumulativeProduced(o.id, s.id) > 0;
+        if (s.end && dateLt(s.end, TODAY) && !hasLogs) return; // past end, no logs — skip
         items.push({
           orderId: o.id, stageId: s.id,
           part: o.part, stageName: s.name,
@@ -2962,8 +2966,10 @@ function getTrackableItems() {
         });
       });
     } else {
-      if (!o.machine) return;                            // no machine tagged — skip
-      if (o.start && dateGt(o.start, TODAY)) return;    // future start — skip
+      if (!o.machine) return;                              // no machine — skip
+      if (o.start && dateGt(o.start, TODAY)) return;      // future start — skip
+      const hasLogs = getCumulativeProduced(o.id, '') > 0;
+      if (o.end && dateLt(o.end, TODAY) && !hasLogs) return; // past end, no logs — skip
       items.push({
         orderId: o.id, stageId: '',
         part: o.part, stageName: '',
@@ -3252,49 +3258,84 @@ function renderProductionTab() {
     countEl.textContent = items.length + ' of ' + allCount + ' shown' + selInfo;
   }
 
+  // Build card layout grouped by machine
+  const wrap = document.getElementById('prod-cards');
+  if (!wrap) { tbody.closest('.orders-wrap').id = 'prod-cards-wrap'; }
+
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:24px">' +
-      (selectedProdItems.size > 0 ? '&#128195; Your saved selection has no active items — <button class="btn btn-sm" onclick="prodClearItemSelection()" style="margin-left:6px">Show All</button>' : 'No matching orders/stages') +
-      '</td></tr>';
+    const container = document.getElementById('prod-cards') || tbody.closest('.orders-wrap');
+    container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3)">' +
+      (selectedProdItems.size > 0
+        ? '&#128195; Your saved items have no active jobs today. <button class="btn btn-sm" onclick="prodClearItemSelection()" style="margin-left:8px">Show All</button>'
+        : '&#9989; No active jobs for today') +
+      '</div>';
     return;
   }
 
-  tbody.innerHTML = items.map(it => {
-    const f = calcForecast(it);
-    const mName = machines.find(m=>m.id===it.machine)?.name || it.machine || '—';
-    const todayEntry = getProdEntries(it.orderId, it.stageId).find(d => d.date === TODAY);
-    const todayVal = todayEntry ? todayEntry.qtyProduced : '';
+  // Group by machine
+  const byMachine = {};
+  items.forEach(it => { (byMachine[it.machine||'none'] = byMachine[it.machine||'none']||[]).push(it); });
 
-    const riskBadge =
-      f.risk === 'missdeadline' ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">&#128680; Miss Deadline</span>' :
-      f.risk === 'delayed'      ? '<span class="badge" style="background:var(--amber-dim);color:var(--amber)">&#9203; Delayed</span>' :
-      f.risk === 'stalled'      ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">&#9888; Stalled</span>' :
-      f.risk === 'building'     ? '<span class="badge" style="background:var(--blue-dim);color:var(--blue)" title="Need 1 more day of data before forecasting">&#128202; Building (1/2)</span>' :
-      f.risk === 'no-data'      ? '<span class="badge" style="background:var(--bg3);color:var(--text3)">No data</span>' :
-      f.risk === 'done'         ? '<span class="badge badge-done">Done</span>' :
-                                   '<span class="badge" style="background:var(--green-dim);color:var(--green)">&#9989; On Track</span>';
+  const html = Object.entries(byMachine).map(([mid, mitems]) => {
+    const mName = machines.find(m=>m.id===mid)?.name || mid;
+    const loggedCount = mitems.filter(it => getProdEntries(it.orderId,it.stageId).find(d=>d.date===TODAY)).length;
 
-    const dataKey = it.orderId + '::' + (it.stageId||'');
+    const cards = mitems.map(it => {
+      const f       = calcForecast(it);
+      const dataKey = it.orderId + '::' + (it.stageId||'');
+      const todayE  = getProdEntries(it.orderId, it.stageId).find(d => d.date === TODAY);
+      const todayVal= todayE ? todayE.qtyProduced : '';
+      const isLogged= todayVal !== '';
+      const isPinned= selectedProdItems.has(dataKey);
 
-    const itemKey = it.orderId + '::' + (it.stageId||'');
-    const isSelected = selectedProdItems.size === 0 || selectedProdItems.has(itemKey);
-    return '<tr' + (selectedProdItems.has(itemKey) ? ' style="background:rgba(0,201,141,0.04)"' : '') + '>' +
-      '<td style="padding:4px 8px"><input type="checkbox" class="prod-item-cb" data-key="' + itemKey + '" ' + (selectedProdItems.has(itemKey)?'checked':'') + ' onchange="toggleProdItem(this.dataset.key,this.checked)" style="accent-color:var(--green)"/></td>' +
-      '<td class="mono" style="font-size:11px;color:var(--text3)">' + it.orderId + '</td>' +
-      '<td style="font-weight:500">' + it.part + '</td>' +
-      '<td style="color:var(--text2);font-size:12px">' + (it.stageName || '—') + '</td>' +
-      '<td style="color:var(--blue)">' + mName + '</td>' +
-      '<td class="mono">' + it.requiredQty + '</td>' +
-      '<td class="mono" style="color:var(--green)">' + f.cumulative + '</td>' +
-      '<td class="mono">' + f.remaining + '</td>' +
-      '<td class="mono" style="font-size:12px' + (f.risk==='building'?';font-style:italic;color:var(--text3)':'') + '">' + (f.avgRate ? f.avgRate.toFixed(1) + (f.risk==='building'?' (early)':'') : '—') + '</td>' +
-      '<td><input type="number" min="0" class="prod-inp" data-key="' + dataKey + '" value="' + todayVal + '" placeholder="0" style="width:70px;padding:4px 8px;border:1px solid var(--border2);border-radius:5px;background:var(--bg3);color:var(--text);font-size:12px;outline:none"/></td>' +
-      '<td style="font-size:12px;color:' + (f.risk==='missdeadline'?'var(--red)':f.risk==='delayed'?'var(--amber)':'var(--text2)') + '">' + (f.projectedEnd ? dispFull(f.projectedEnd) : '—') + '</td>' +
-      '<td>' + riskBadge + '</td>' +
-      '</tr>';
+      const riskColor = f.risk==='missdeadline'||f.risk==='stalled' ? 'var(--red)' : f.risk==='delayed' ? 'var(--amber)' : f.risk==='ontrack' ? 'var(--green)' : 'var(--text3)';
+      const riskText  = f.risk==='missdeadline'?'&#128680; Miss Deadline':f.risk==='delayed'?'&#9203; Delayed':f.risk==='stalled'?'&#9888; Stalled':f.risk==='building'?'&#128202; Building':f.risk==='ontrack'?'&#9989; On Track':'— No data';
+
+      return '<div style="background:var(--bg2);border:1px solid ' + (isLogged?'rgba(0,201,141,0.5)':'var(--border)') + ';border-radius:var(--radius-lg);padding:14px 16px;display:flex;gap:14px;align-items:center">' +
+        '<input type="checkbox" class="prod-item-cb" data-key="' + dataKey + '"' + (isPinned?' checked':'') + ' onchange="toggleProdItem(this.dataset.key,this.checked)" title="Pin to My List" style="accent-color:var(--green);width:16px;height:16px;flex-shrink:0;cursor:pointer"/>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">' +
+            '<span style="font-size:14px;font-weight:600">' + it.part + '</span>' +
+            (it.stageName?'<span style="font-size:11px;padding:2px 7px;background:var(--bg3);border-radius:4px;color:var(--text2)">'+it.stageName+'</span>':'') +
+            '<span style="font-size:11px;color:var(--text3);font-family:monospace">'+it.orderId+'</span>' +
+          '</div>' +
+          '<div style="display:flex;gap:14px;font-size:12px;color:var(--text2);flex-wrap:wrap">' +
+            '<span>Req: <b>'+it.requiredQty+'</b></span>' +
+            '<span>Done: <b style="color:var(--green)">'+f.cumulative+'</b></span>' +
+            '<span>Left: <b>'+f.remaining+'</b></span>' +
+            (f.avgRate?'<span>Rate: <b>'+f.avgRate.toFixed(1)+'/day'+(f.risk==='building'?' <i style="color:var(--text3)">(est.)</i>':'')+'</b></span>':'') +
+            (f.projectedEnd?'<span>Proj end: <b style="color:'+riskColor+'">'+dispFull(f.projectedEnd)+'</b></span>':'') +
+            '<span style="color:'+riskColor+'">'+riskText+'</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:center;flex-shrink:0">' +
+          '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Today&#39;s Qty</div>' +
+          '<input type="number" min="0" class="prod-inp" data-key="' + dataKey + '" value="' + todayVal + '" placeholder="0"' +
+            ' style="width:84px;padding:8px 6px;border:2px solid '+(isLogged?'var(--green)':'var(--border2)')+';border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:20px;font-weight:700;text-align:center;outline:none"' +
+            ' oninput="this.style.borderColor=this.value?&quot;var(--green)&quot;:&quot;var(--border2)&quot;"/>' +
+          '<div style="font-size:10px;margin-top:3px;color:'+(isLogged?'var(--green)':'var(--text3)')+'">'+(isLogged?'&#10003; Logged':'enter qty')+'</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div style="margin-bottom:20px">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+        '<span style="font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-dim);padding:4px 12px;border-radius:5px">' + mName + '</span>' +
+        '<span style="font-size:11px;color:var(--text3)">' + loggedCount + ' / ' + mitems.length + ' logged today</span>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' + cards + '</div>' +
+    '</div>';
   }).join('');
 
-  // Wire up save-on-change for production inputs
+  // Render into wrap (replace table)
+  const container = document.getElementById('prod-cards') || (() => {
+    const ow = tbody.closest('.orders-wrap');
+    ow.innerHTML = '<div id="prod-cards"></div>';
+    return document.getElementById('prod-cards');
+  })();
+  container.innerHTML = html;
+
+  // Wire save-on-change
   document.querySelectorAll('.prod-inp').forEach(inp => {
     inp.addEventListener('change', () => saveProductionEntry(inp));
   });
