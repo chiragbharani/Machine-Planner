@@ -665,7 +665,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
     <div class="orders-wrap">
       <table>
+        <!-- Bulk action bar — shown when items are selected -->
+        <div id="co-bulk-bar" style="display:none;background:var(--blue-dim);border:1px solid rgba(77,142,248,0.3);border-radius:var(--radius);padding:8px 14px;margin-bottom:10px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+          <span id="co-bulk-count" style="font-size:12px;font-weight:600;color:var(--blue)">0 selected</span>
+          <button class="btn btn-sm btn-amber" onclick="bulkNotRequired()">&#10005; Mark as Not Required</button>
+          <button class="btn btn-sm" onclick="coBulkClear()">Clear Selection</button>
+        </div>
         <thead><tr>
+          <th style="width:32px"><input type="checkbox" id="co-select-all-cb" onchange="coToggleAll(this.checked)" style="accent-color:var(--green)" title="Select all visible"/></th>
           <th>PO Number</th><th>GI Code</th><th>Qty</th><th>Exp. Dispatch</th>
           <th>Status</th><th>Linked Order</th><th>Added</th><th></th>
         </tr></thead>
@@ -2196,6 +2203,59 @@ function updateCODot() {
   }
 }
 
+function coUpdateBulkBar() {
+  const checked = document.querySelectorAll('.co-row-cb:checked');
+  const bar = document.getElementById('co-bulk-bar');
+  const countEl = document.getElementById('co-bulk-count');
+  if (!bar) return;
+  if (checked.length > 0) {
+    bar.style.display = 'flex';
+    countEl.textContent = checked.length + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+  // Update select-all checkbox state
+  const allCbs = document.querySelectorAll('.co-row-cb:not([disabled])');
+  const allChecked = allCbs.length > 0 && [...allCbs].every(cb => cb.checked);
+  const selAll = document.getElementById('co-select-all-cb');
+  if (selAll) selAll.checked = allChecked;
+}
+
+function coToggleAll(checked) {
+  document.querySelectorAll('.co-row-cb:not([disabled])').forEach(cb => cb.checked = checked);
+  coUpdateBulkBar();
+}
+
+function coBulkClear() {
+  document.querySelectorAll('.co-row-cb').forEach(cb => cb.checked = false);
+  coUpdateBulkBar();
+}
+
+async function bulkNotRequired() {
+  const checked = [...document.querySelectorAll('.co-row-cb:checked')];
+  if (!checked.length) return;
+
+  // Collect target COs
+  const targets = checked.map(cb => ({
+    poNumber: cb.dataset.po,
+    rowIndex: parseInt(cb.dataset.ridx)||0
+  }));
+
+  // Open the not-required modal — but for bulk
+  window._bulkNotReqTargets = targets;
+  notReqPO   = null; // clear single-mode
+  notReqRowIdx = 0;
+  document.getElementById('not-req-reason').value = '';
+  document.getElementById('not-req-notes').value = '';
+  document.getElementById('not-req-err').style.display = 'none';
+
+  // Update modal title to show count
+  const titleEl = document.querySelector('#not-req-modal .modal-title');
+  if (titleEl) titleEl.textContent = 'Mark ' + targets.length + ' Order' + (targets.length>1?'s':'') + ' as Not Required';
+
+  document.getElementById('not-req-modal').classList.add('open');
+}
+
 function renderCustomerOrders() {
   const tbody = document.getElementById('co-body'); if (!tbody) return;
   const filterStatus = document.getElementById('co-filter-status')?.value || '';
@@ -2253,6 +2313,7 @@ function renderCustomerOrders() {
       : '<button class="btn btn-sm co-unplan-btn" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '">Unplan</button>';
 
     return '<tr style="' + (co.status==='pending'&&isOverdue?'background:rgba(255,95,95,0.04)':'') + '">' +
+      '<td style="padding:4px 8px"><input type="checkbox" class="co-row-cb" data-po="' + co.poNumber + '" data-ridx="' + (co.rowIndex||0) + '" onchange="coUpdateBulkBar()" style="accent-color:var(--green)"' + (co.status!=='pending'?' disabled style="opacity:0.3;accent-color:var(--green)"':'') + '/></td>' +
       '<td class="mono" style="font-size:12px;font-weight:600">' + co.poNumber + '</td>' +
       '<td style="color:var(--blue);font-weight:500">' + co.giCode + (hasTemplate&&co.status==='pending'?' <span style="font-size:10px;color:var(--green)">&#128196;</span>':'') + '</td>' +
       '<td><span class="qty-badge">' + co.orderQty + '</span></td>' +
@@ -2318,10 +2379,36 @@ async function confirmNotRequired() {
   const em     = document.getElementById('not-req-err');
   if (!reason) { em.textContent='Please select a reason.'; em.style.display='block'; return; }
   const fullReason = notes ? reason + ' — ' + notes : reason;
+
+  document.getElementById('not-req-modal').classList.remove('open');
+
+  // Reset modal title
+  const titleEl = document.querySelector('#not-req-modal .modal-title');
+  if (titleEl) titleEl.textContent = 'Mark as Not Required';
+
+  // ── Bulk mode ──
+  if (window._bulkNotReqTargets && window._bulkNotReqTargets.length) {
+    const targets = window._bulkNotReqTargets;
+    window._bulkNotReqTargets = null;
+    let done = 0;
+    for (const t of targets) {
+      const co = customerOrders.find(c => c.poNumber === t.poNumber && (c.rowIndex===t.rowIndex||t.rowIndex===0));
+      if (!co) continue;
+      co.status = 'not_required'; co.notRequiredReason = fullReason;
+      try {
+        await call('updateCOStatus', {poNumber:t.poNumber, status:'not_required', reason:fullReason, linkedOrderId:'', rowIndex:t.rowIndex});
+        done++;
+      } catch(e) {}
+    }
+    renderCustomerOrders(); updateCODot(); coBulkClear();
+    toast(done + ' order' + (done>1?'s':'') + ' marked as Not Required ✓');
+    return;
+  }
+
+  // ── Single mode ──
   const co = customerOrders.find(c => c.poNumber === notReqPO);
   if (!co) return;
   co.status = 'not_required'; co.notRequiredReason = fullReason;
-  document.getElementById('not-req-modal').classList.remove('open');
   renderCustomerOrders(); updateCODot();
   try {
     await call('updateCOStatus', {poNumber: notReqPO, status:'not_required', reason:fullReason, linkedOrderId:'', rowIndex:notReqRowIdx});
