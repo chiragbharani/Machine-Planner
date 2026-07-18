@@ -636,6 +636,46 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 </div>
 
+<!-- VENDOR MASTER TAB -->
+<div id="tab-vendors" style="display:none">
+  <div class="section" style="padding-top:8px">
+    <div class="section-head">
+      <span class="section-title">&#127970; Vendor Master</span>
+      <button class="btn btn-green" onclick="openVendorModal(null)">+ New Vendor</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;line-height:1.7">
+      &#128161; Add all vendors here — RM suppliers, job work vendors, platers, heat treaters etc. Once added, you can assign them to stages in the Item Master and in orders.
+    </div>
+    <div id="vendors-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>
+  </div>
+</div>
+
+<!-- VENDOR MODAL -->
+<div class="modal-bg" id="vendor-modal">
+  <div class="modal" style="width:460px">
+    <div class="modal-title" id="vendor-modal-title">New Vendor</div>
+    <div class="f2" style="margin-bottom:12px">
+      <div class="form-row" style="margin-bottom:0"><label>Vendor Name <span style="color:var(--red)">*</span></label><input id="v-name" placeholder="e.g. Shree Heat Treat"/></div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Type <span style="color:var(--red)">*</span></label>
+        <select id="v-type" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;outline:none">
+          <option value="">— Select —</option>
+          <option value="RM Supplier">RM Supplier</option>
+          <option value="Job Work">Job Work</option>
+          <option value="Both">Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Contact (phone / email)</label><input id="v-contact" placeholder="e.g. 98765 43210"/></div>
+    <div class="form-row"><label>Notes</label><textarea id="v-notes" placeholder="Speciality, lead time, remarks..."></textarea></div>
+    <div class="err-msg" id="v-err"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeVendorModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveVendorLocal()">Save Vendor</button>
+    </div>
+  </div>
+</div>
+
 <!-- CUSTOMER ORDERS TAB -->
 <div id="tab-customers" style="display:none">
   <div class="section" style="padding-top:8px">
@@ -999,6 +1039,7 @@ async function syncNow(silent = false) {
     templates      = d.templates || [];
     customerOrders  = d.customerOrders || [];
     dailyProduction = d.dailyProduction || [];
+    vendors         = d.vendors || [];
     updateCODot();
     orderCounter   = orders.length  ? Math.max(...orders.map(o  => parseInt(o.id.replace(/\D/g,''))||0))+1  : 1;
     machineCounter = machines.length? Math.max(...machines.map(m => parseInt(m.id.replace(/\D/g,''))||0))+1 : 1;
@@ -1246,10 +1287,14 @@ function buildBar(startD, endD, order, stage, days, viewEnd) {
   const isAppr = stage && stage.approvalRequired;
 
   const bar = document.createElement('div');
+  const sType = stage ? (stage.stageType||'internal') : 'internal';
+  const isOutsourced = sType === 'outsourced';
+  const isPurchase   = sType === 'purchase';
   bar.className = 'jbar' + (isAppr ? ' jbar-approval' : '');
-  const bColor = isAppr ? 'rgba(155,126,255,0.12)' : cl.dim;
-  const boColor = st === 'awaiting_approval' ? 'rgba(155,126,255,0.9)' : isAppr ? 'rgba(155,126,255,0.6)' : cl.border;
-  const tColor = isAppr ? '#9b7eff' : cl.text;
+  // Colour: outsourced = purple, purchase = amber, internal = order colour
+  const bColor  = isPurchase ? 'rgba(245,166,35,0.13)'   : isOutsourced ? 'rgba(155,126,255,0.13)' : isAppr ? 'rgba(155,126,255,0.12)' : cl.dim;
+  const boColor = isPurchase ? 'rgba(245,166,35,0.7)'    : isOutsourced ? 'rgba(155,126,255,0.7)'  : st==='awaiting_approval' ? 'rgba(155,126,255,0.9)' : isAppr ? 'rgba(155,126,255,0.6)' : cl.border;
+  const tColor  = isPurchase ? 'var(--amber)'             : isOutsourced ? 'var(--purple)'          : isAppr ? '#9b7eff' : cl.text;
   bar.style.cssText = 'left:'+lp+'%;width:'+Math.max(wp,0.6)+'%;background:'+bColor+';border-color:'+boColor+';color:'+tColor+';' + ((st==='done'||st==='approved')?'opacity:0.45':'');
 
   if (!stage) {
@@ -1258,7 +1303,13 @@ function buildBar(startD, endD, order, stage, days, viewEnd) {
   }
   const lb = document.createElement('span'); lb.style.cssText = 'position:relative;z-index:2';
   if (stage) {
-    lb.textContent = stage.seq + '. ' + stage.name + (stage.approvalRequired ? ' ◆' : '');
+    let stageLbl = (isPurchase ? '📦 ' : isOutsourced ? '🏭 ' : '') + stage.seq + '. ' + stage.name;
+    // Append vendor names for outsourced/purchase stages
+    if ((isOutsourced || isPurchase) && stage.vendorIds && stage.vendorIds.length) {
+      const vNames = stage.vendorIds.map(vid => vendors.find(v=>v.id===vid)?.name||vid);
+      stageLbl += ' [' + vNames.join(', ') + ']';
+    }
+    lb.textContent = stageLbl + (stage.approvalRequired ? ' ◆' : '');
   } else {
     const ownerStr = order.owner ? String(order.owner).split(' ')[0] + ' · ' : '';
     const qtyStr = order.qty && order.qty > 1 ? ' ×' + order.qty : '';
@@ -1750,6 +1801,26 @@ function addStageField(existing = null) {
     '</div>' +
     '<div><div class="mc-lbl">Assigned To</div>' +
     '<input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.assignee?existing.assignee:'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
+    // Stage Type
+    '<div style="margin:10px 0 6px">' +
+    '<div class="mc-lbl" style="margin-bottom:6px">Stage Type</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+    ['internal','outsourced','purchase'].map(function(t) {
+      const checked = (existing ? existing.stageType||'internal' : 'internal') === t ? 'checked' : '';
+      const label = t==='internal' ? '&#9881; Internal' : t==='outsourced' ? '&#127970; Outsourced' : '&#128230; Purchase';
+      return '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:5px 10px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3)">' +
+        '<input type="radio" name="sftype-' + fid + '" value="' + t + '" ' + checked + ' data-fid="' + fid + '" data-stype="' + t + '" onchange="onOrderStageTypeChange(this.dataset.fid,this.dataset.stype)" style="accent-color:var(--green)"/>' + label + '</label>';
+    }).join('') +
+    '</div></div>' +
+    // Vendor selector (shown only for outsourced/purchase)
+    '<div id="' + fid + '-vrow" style="margin-bottom:8px;display:' + ((existing&&existing.stageType&&existing.stageType!=='internal')?'':'none') + '">' +
+    '<div class="mc-lbl">Vendor(s)</div>' +
+    '<select id="' + fid + '-vendors" class="mc-inp" multiple style="height:80px;margin-bottom:4px">' +
+    vendors.map(function(v){ return '<option value="' + v.id + '"' + (existing&&Array.isArray(existing.vendorIds)&&existing.vendorIds.includes(v.id)?' selected':'') + '>' + v.name + ' (' + v.type + ')</option>'; }).join('') +
+    '</select>' +
+    '<div class="mc-lbl" style="margin-top:4px">Expected Delivery Date</div>' +
+    '<input id="' + fid + '-expdelivery" type="date" class="mc-inp" style="margin-bottom:0" value="' + (existing&&existing.expectedDelivery?normaliseDate(existing.expectedDelivery)||'':'') + '"/>' +
+    '</div>' +
     '<div style="display:flex;gap:16px;align-items:center;margin-top:8px">' +
     '<label class="approval-toggle"><input type="checkbox" id="' + fid + '-approval" ' + appr + '/><span>Requires sample approval</span></label>' +
     '<label class="approval-toggle" style="color:var(--green)"><input type="checkbox" id="' + fid + '-done" ' + done + ' style="accent-color:var(--green)"/><span>Mark as Completed</span></label>' +
@@ -1913,7 +1984,10 @@ async function saveOrder() {
           end:      document.getElementById(f.fid+'-end')?.value        || '',
           deadline: document.getElementById(f.fid+'-deadline')?.value   || '',
           actualEnd: '',
-          status: (document.getElementById(f.fid+'-done')?.checked) ? 'done' : (f.existing ? f.existing.status : 'pending'),
+          status:          (document.getElementById(f.fid+'-done')?.checked) ? 'done' : (f.existing ? f.existing.status : 'pending'),
+          stageType:       document.querySelector('input[name="sftype-'+f.fid+'"]:checked')?.value || 'internal',
+          vendorIds:       [...(document.getElementById(f.fid+'-vendors')?.selectedOptions||[])].map(o=>o.value),
+          expectedDelivery:document.getElementById(f.fid+'-expdelivery')?.value || '',
           approvalRequired: document.getElementById(f.fid+'-approval')?.checked || false,
           approvedBy:'', approvedAt:'', rejectedNote:'',
           notes: document.getElementById(f.fid+'-notes')?.value || ''
@@ -1927,6 +2001,11 @@ async function saveOrder() {
     const wasNew = !editId;
     closeOrderModal(); renderAll(); updateApprovalDot();
     toast(wasNew ? 'Order added ✓' : 'Order updated ✓');
+    // Link to customer order if opened from Customer Orders tab
+    if (wasNew && window._pendingCOLink) {
+      linkCOToOrder(order.id, window._pendingCOLink);
+      window._pendingCOLink = null;
+    }
     // Send instant notification to owner + team (fire and forget)
     if (order.owner || order.teamMembers) {
       call('notifyOrderCreated', {order, isNew: wasNew}).catch(()=>{});
@@ -2068,7 +2147,7 @@ const hideTip = () => ttEl.style.display = 'none';
 function switchTab(t, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['gantt','orders','archive','import','machines','templates','customers','aiplanning','production','chat','settings'].forEach(id => {
+  ['gantt','orders','archive','import','machines','vendors','templates','customers','aiplanning','production','chat','settings'].forEach(id => {
     document.getElementById('tab-'+id).style.display = t===id ? '' : 'none';
   });
   if (t==='orders')    renderOrders();
@@ -2354,16 +2433,16 @@ function openOrderFromCO(co) {
   // Open the new order modal pre-filled from customer order data
   openOrderModal(null);
   // Fill fields from CO
-  document.getElementById('f-part').value    = co.giCode;
-  document.getElementById('f-qty').value     = co.orderQty;
+  document.getElementById('f-part').value     = co.giCode;
+  document.getElementById('f-qty').value      = co.orderQty;
   document.getElementById('f-dispatch').value = normaliseDate(co.expDispatch) || '';
 
+  // Store full CO reference (poNumber + rowIndex) for linking after save
+  window._pendingCOLink    = co.poNumber;
+  window._pendingCORowIdx  = co.rowIndex || 0;
+
   // Check for template match
-  setTimeout(() => {
-    checkTemplateMatch();
-    // Store PO reference for linking after save
-    window._pendingCOLink = co.poNumber;
-  }, 100);
+  setTimeout(() => checkTemplateMatch(), 100);
 }
 
 // Override saveOrder completion to also link the customer order
@@ -2457,11 +2536,18 @@ async function saveCO() {
 // ── Link production order to customer order after save ────
 // Patch into syncNow to also update CO status when an order is linked
 function linkCOToOrder(orderId, poNumber) {
-  const co = customerOrders.find(c => c.poNumber === poNumber);
-  if (!co) return;
-  co.status = 'planned'; co.linkedOrderId = orderId;
+  const rowIdx = window._pendingCORowIdx || 0;
+  // Use rowIndex if available to handle duplicate PO numbers correctly
+  const co = customerOrders.find(c => c.poNumber === poNumber &&
+    (rowIdx === 0 || c.rowIndex === rowIdx));
+  if (!co) { console.warn('linkCOToOrder: CO not found for', poNumber); return; }
+  co.status = 'planned'; co.linkedOrderId = String(orderId);
+  window._pendingCORowIdx = 0;
   updateCODot();
-  call('updateCOStatus', {poNumber, status:'planned', reason:'', linkedOrderId: orderId}).catch(()=>{});
+  renderCustomerOrders(); // refresh to show updated status
+  call('updateCOStatus', {poNumber, status:'planned', reason:'', linkedOrderId: String(orderId), rowIndex: co.rowIndex||0})
+    .then(() => toast('Customer order ' + poNumber + ' marked as Planned ✓'))
+    .catch(() => toast('Warning: order saved but customer order status not updated', 'error'));
 }
 
 // ── Templates ────────────────────────────────────────────
@@ -2547,6 +2633,23 @@ function addTemplateStage(existing = null) {
     '<div><div class="mc-lbl">Machine (optional)</div><select id="' + fid + '-machine" class="mc-inp" style="margin-bottom:0"><option value="">— None —</option>' +
     machines.map(m => '<option value="' + m.id + '"' + (existing&&existing.machine===m.id?' selected':'') + '>' + m.name + '</option>').join('') +
     '</select></div></div>' +
+    // Stage Type selector
+    '<div class="form-row" style="margin-bottom:8px">' +
+    '<label class="mc-lbl">Stage Type</label>' +
+    '<div style="display:flex;gap:8px">' +
+    ['internal','outsourced','purchase'].map(t =>
+      '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3)">' +
+      '<input type="radio" name="stagetype-' + fid + '" value="' + t + '"' + ((existing?existing.stageType||'internal':'internal')===t?' checked':'') + ' onchange="onStageTypeChange(\'' + fid + '\',\'' + t + '\')" style="accent-color:var(--green)"/>' +
+      (t==='internal'?'&#9881; Internal':t==='outsourced'?'&#127970; Outsourced':'&#128230; Purchase') +
+      '</label>'
+    ).join('') +
+    '</div></div>' +
+    // Vendor selector (shown for outsourced/purchase)
+    '<div id="' + fid + '-vendor-row" style="margin-bottom:8px;display:' + ((existing&&existing.stageType&&existing.stageType!=='internal')?'block':'none') + '">' +
+    '<div class="mc-lbl">Vendor(s) <span style="font-size:10px;color:var(--text3)">select one or more</span></div>' +
+    '<select id="' + fid + '-vendors" class="mc-inp" multiple style="height:80px;margin-bottom:0">' +
+    vendors.map(v => '<option value="' + v.id + '"' + (existing&&existing.vendorIds&&existing.vendorIds.includes(v.id)?' selected':'') + '>' + v.name + ' — ' + v.type + '</option>').join('') +
+    '</select></div>' +
     '<div class="f2" style="margin-bottom:8px">' +
     '<div><div class="mc-lbl">Assigned To</div><input id="' + fid + '-assignee" class="mc-inp" style="margin-bottom:0" value="' + (existing?existing.assignee||'':'') + '" placeholder="e.g. priya@gmail.com"/></div>' +
     '<div><div class="mc-lbl">Cycle Time (min/pc) <span style="color:var(--amber);font-size:9px">for AI planning</span></div><input id="' + fid + '-cycletime" class="mc-inp" type="number" min="0.01" step="0.01" value="' + (existing?existing.cycleTime||'':'') + '" placeholder="e.g. 2.5" style="margin-bottom:0"/></div>' +
@@ -2576,6 +2679,8 @@ async function saveTemplate() {
     name:     document.getElementById(f.fid+'-name')?.value.trim() || 'Stage '+(i+1),
     machine:  document.getElementById(f.fid+'-machine')?.value || '',
     assignee: document.getElementById(f.fid+'-assignee')?.value.trim() || '',
+    stageType: document.querySelector('input[name="stagetype-'+f.fid+'"]:checked')?.value || 'internal',
+    vendorIds: [...(document.getElementById(f.fid+'-vendors')?.selectedOptions||[])].map(o=>o.value),
     cycleTime: parseFloat(document.getElementById(f.fid+'-cycletime')?.value)||0,
     duration:  parseInt(document.getElementById(f.fid+'-duration')?.value)||1,
     dlOffset:  parseInt(document.getElementById(f.fid+'-dloffset')?.value)||0,
@@ -3464,6 +3569,116 @@ function loadTheme() {
     const saved = localStorage.getItem('mpTheme') || 'dark';
     applyTheme(saved);
   } catch(e) { applyTheme('dark'); }
+}
+
+
+// ── VENDOR MASTER ─────────────────────────────────────────
+let vendors = [];
+let editVendorId = null;
+
+function renderVendors() {
+  const grid = document.getElementById('vendors-grid'); if (!grid) return;
+  if (!vendors.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)"><div style="font-size:24px;margin-bottom:8px">&#127970;</div><div>No vendors yet — add your first vendor</div></div>';
+    return;
+  }
+  const typeColor = {'RM Supplier':'var(--blue)','Job Work':'var(--purple)','Both':'var(--green)'};
+  const typeBg = {'RM Supplier':'var(--blue-dim)','Job Work':'var(--purple-dim)','Both':'var(--green-dim)'};
+  grid.innerHTML = vendors.map(v =>
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+    '<div>' +
+    '<div style="font-size:14px;font-weight:600">' + v.name + '</div>' +
+    '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:' + (typeBg[v.type]||'var(--bg3)') + ';color:' + (typeColor[v.type]||'var(--text3)') + '">' + (v.type||'—') + '</span>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px">' +
+    '<button class="btn btn-sm vnd-edit-btn" data-vid="' + v.id + '">Edit</button>' +
+    '<button class="btn btn-sm btn-red vnd-del-btn" data-vid="' + v.id + '">✕</button>' +
+    '</div></div>' +
+    (v.contact ? '<div style="font-size:12px;color:var(--text3)">&#128222; ' + v.contact + '</div>' : '') +
+    (v.notes   ? '<div style="font-size:12px;color:var(--text3);margin-top:4px">' + v.notes + '</div>' : '') +
+    '</div>'
+  ).join('');
+}
+
+document.addEventListener('click', function(e) {
+  const editBtn = e.target.closest('.vnd-edit-btn');
+  const delBtn  = e.target.closest('.vnd-del-btn');
+  if (editBtn) openVendorModal(editBtn.dataset.vid);
+  if (delBtn)  deleteVendorLocal(delBtn.dataset.vid);
+});
+
+function openVendorModal(id) {
+  editVendorId = id;
+  document.getElementById('vendor-modal-title').textContent = id ? 'Edit Vendor' : 'New Vendor';
+  document.getElementById('v-err').style.display = 'none';
+  if (id) {
+    const v = vendors.find(x => x.id === id); if (!v) return;
+    document.getElementById('v-name').value    = v.name;
+    document.getElementById('v-type').value    = v.type;
+    document.getElementById('v-contact').value = v.contact;
+    document.getElementById('v-notes').value   = v.notes;
+  } else {
+    ['v-name','v-contact','v-notes'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('v-type').value = '';
+  }
+  document.getElementById('vendor-modal').classList.add('open');
+}
+
+const closeVendorModal = () => {
+  document.getElementById('vendor-modal').classList.remove('open');
+  editVendorId = null;
+};
+
+async function saveVendorLocal() {
+  const name = document.getElementById('v-name').value.trim();
+  const type = document.getElementById('v-type').value;
+  const em   = document.getElementById('v-err');
+  if (!name) { em.textContent = 'Please enter vendor name.'; em.style.display='block'; return; }
+  if (!type) { em.textContent = 'Please select vendor type.'; em.style.display='block'; return; }
+  const v = {
+    id:      editVendorId || ('VND-' + Date.now()),
+    name, type,
+    contact: document.getElementById('v-contact').value.trim(),
+    notes:   document.getElementById('v-notes').value.trim()
+  };
+  try {
+    await call('saveVendor', {vendor: v});
+    if (editVendorId) { const i = vendors.findIndex(x=>x.id===editVendorId); vendors[i]=v; }
+    else vendors.push(v);
+    closeVendorModal(); renderVendors();
+    toast('Vendor saved ✓');
+  } catch(e) { em.textContent='Save failed: '+e.message; em.style.display='block'; }
+}
+
+async function deleteVendorLocal(id) {
+  if (!confirm('Delete this vendor?')) return;
+  try {
+    await call('deleteVendor', {id});
+    vendors = vendors.filter(v => v.id !== id);
+    renderVendors(); toast('Vendor deleted');
+  } catch(e) { toast('Delete failed','error'); }
+}
+
+// ── Stage type toggle (order stage editor) ────────────────
+function onOrderStageTypeChange(fid, type) {
+  const vrow = document.getElementById(fid + '-vrow');
+  if (vrow) vrow.style.display = type === 'internal' ? 'none' : '';
+  // Clear machine if outsourced/purchase
+  if (type !== 'internal') {
+    const machSel = document.getElementById(fid + '-machine');
+    if (machSel) machSel.value = '';
+  }
+}
+
+// ── Stage type toggle (Item Master stage editor) ──────────
+function onStageTypeChange(fid, type) {
+  const vrow = document.getElementById(fid + '-vendor-row');
+  if (vrow) vrow.style.display = type === 'internal' ? 'none' : '';
+  if (type !== 'internal') {
+    const machSel = document.getElementById(fid + '-machine');
+    if (machSel) machSel.value = '';
+  }
 }
 
 // ── User name ─────────────────────────────────────────────
