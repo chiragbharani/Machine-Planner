@@ -256,6 +256,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <button class="tab" onclick="switchTab('archive',this)">Archive</button>
       <button class="tab" onclick="switchTab('import',this)">Import/Export</button>
       <button class="tab" onclick="switchTab('machines',this)">Machines</button>
+      <button class="tab" onclick="switchTab('vendors',this)">&#127970; Vendors</button>
       <button class="tab" onclick="switchTab('production',this)">&#128202; Daily Production<span class="bdot" id="risk-dot"></span></button>
       <button class="tab" onclick="switchTab('aiplanning',this)">&#129302; AI Planning</button>
       <button class="tab" onclick="switchTab('customers',this)">&#128203; Customer Orders<span class="bdot" id="co-dot"></span></button>
@@ -2153,6 +2154,7 @@ function switchTab(t, btn) {
   if (t==='orders')    renderOrders();
   if (t==='archive')   renderArchiveTab();
   if (t==='machines')  renderMachines();
+  if (t==='vendors')   renderVendors();
   if (t==='templates')  renderTemplates();
   if (t==='customers')   renderCustomerOrders();
   if (t==='aiplanning')  initAIPlanning();
