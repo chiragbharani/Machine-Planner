@@ -430,12 +430,28 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:6px">Your Name</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">Used in chat messages and comments. Set once per device.</div>
-      <div style="display:flex;gap:8px">
-        <input id="user-name-inp" placeholder="Your name e.g. Rajesh Kumar" style="flex:1;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none"/>
-        <button class="btn btn-green btn-sm" onclick="saveUserName()">Save</button>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">&#128100; Your Identity</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+        Set your name and email once per device. The dashboard will show only orders assigned to you.<br>
+        <span style="color:var(--amber)">&#9888; Your email must match the Owner or Team Members field in orders exactly.</span>
       </div>
+      <div class="f2" style="margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your Name</div>
+          <input id="user-name-inp" placeholder="e.g. Rajesh Kumar" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none"/>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your Email (Gmail) <span style="color:var(--red)">*</span></div>
+          <input id="user-email-inp" type="email" placeholder="e.g. rajesh@gmail.com" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none"/>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Admin / Manager Emails <span style="font-size:10px">(see all orders — comma separated)</span></div>
+        <input id="admin-emails-inp" placeholder="e.g. chirag@gmail.com, kishan@gmail.com" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none"/>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">These emails see everything regardless of order assignment.</div>
+      </div>
+      <button class="btn btn-green btn-sm" onclick="saveUserIdentity()">Save Identity</button>
+      <div id="identity-status" style="font-size:12px;margin-top:8px;color:var(--green)"></div>
     </div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:600;margin-bottom:6px">Email Reminders</div>
@@ -1107,6 +1123,7 @@ async function connectSheet() {
 
 function launchApp() {
   loadTheme();
+  loadUserIdentity();
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('main-app').style.display = '';
   // Restore saved username
@@ -2342,7 +2359,15 @@ function renderCustomerOrders() {
   const filterStatus = document.getElementById('co-filter-status')?.value || '';
   const search = (document.getElementById('co-search')?.value || '').toLowerCase().trim();
 
+  // Match customer orders to user via GI code → linked order's owner
   const filtered = customerOrders.filter(co => {
+    if (!isAdmin() && userEmail) {
+      // Show CO if its linked order belongs to me, or if CO is unplanned (anyone can see unplanned)
+      if (co.linkedOrderId) {
+        const linked = orders.find(o => String(o.id)===co.linkedOrderId);
+        if (linked && !isMyOrder(linked)) return false;
+      }
+    }
     if (filterStatus && co.status !== filterStatus) return false;
     if (search && !co.poNumber.toLowerCase().includes(search) && !co.giCode.toLowerCase().includes(search)) return false;
     return true;
@@ -3683,8 +3708,77 @@ function onStageTypeChange(fid, type) {
   }
 }
 
-// ── User name ─────────────────────────────────────────────
-let userName = localStorage.getItem('mpUserName') || '';
+// ── User Identity ─────────────────────────────────────────
+let userName   = localStorage.getItem('mpUserName')   || '';
+let userEmail  = localStorage.getItem('mpUserEmail')  || '';
+let adminEmails = (localStorage.getItem('mpAdminEmails') || '').split(',').map(e=>e.trim()).filter(Boolean);
+
+function isAdmin() {
+  if (!userEmail) return true; // no identity set — show everything
+  return adminEmails.some(e => e.toLowerCase() === userEmail.toLowerCase());
+}
+
+function isMyOrder(o) {
+  if (isAdmin()) return true;
+  if (!userEmail) return true;
+  const email = userEmail.toLowerCase();
+  if ((o.owner||'').toLowerCase() === email) return true;
+  // Check team members
+  const team = (o.teamMembers||'').split(',').map(e=>e.trim().toLowerCase());
+  return team.includes(email);
+}
+
+function saveUserIdentity() {
+  const name   = document.getElementById('user-name-inp').value.trim();
+  const email  = document.getElementById('user-email-inp').value.trim().toLowerCase();
+  const admins = document.getElementById('admin-emails-inp').value.trim();
+  if (!email) { toast('Please enter your email','error'); return; }
+  if (!email.includes('@')) { toast('Enter a valid email','error'); return; }
+
+  userName    = name || email.split('@')[0];
+  userEmail   = email;
+  adminEmails = admins.split(',').map(e=>e.trim()).filter(Boolean);
+
+  localStorage.setItem('mpUserName',    userName);
+  localStorage.setItem('mpUserEmail',   userEmail);
+  localStorage.setItem('mpAdminEmails', admins);
+
+  updateUserPill();
+  renderAll();
+  const status = document.getElementById('identity-status');
+  if (status) status.textContent = isAdmin() ? '✓ Saved — you have admin access (see all orders)' : '✓ Saved — showing orders assigned to ' + email;
+  toast('Identity saved ✓');
+}
+
+function saveUserName() {
+  // Legacy — redirect to saveUserIdentity
+  saveUserIdentity();
+}
+
+function updateUserPill() {
+  const pill = document.getElementById('user-pill');
+  const pillName = document.getElementById('user-pill-name');
+  const avatar = document.getElementById('user-avatar');
+  if (!pill) return;
+  if (userEmail) {
+    pill.style.display = 'flex';
+    const displayName = userName || userEmail.split('@')[0];
+    if (pillName) pillName.textContent = displayName;
+    if (avatar)   avatar.textContent  = displayName.charAt(0).toUpperCase();
+  } else {
+    pill.style.display = 'none';
+  }
+}
+
+function loadUserIdentity() {
+  const nameInp  = document.getElementById('user-name-inp');
+  const emailInp = document.getElementById('user-email-inp');
+  const adminInp = document.getElementById('admin-emails-inp');
+  if (nameInp)  nameInp.value  = userName;
+  if (emailInp) emailInp.value = userEmail;
+  if (adminInp) adminInp.value = adminEmails.join(', ');
+  updateUserPill();
+}
 
 async function saveApiKey() {
   const key = document.getElementById('api-key-inp')?.value.trim();
